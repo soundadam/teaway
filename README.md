@@ -1,0 +1,125 @@
+# teaway
+
+`teaway` is a small macOS power-control CLI. Its primary job is to keep a Mac
+running after the lid is closed, then restore the setting it changed when the
+user turns it off. A separate command family can schedule, inspect, or cancel
+one explicit delayed shutdown.
+
+`teaway` does not manage development tools, terminals, remote access, or work
+processes. It changes only the power behavior the user requested.
+
+## Naming contract
+
+Homebrew Core already owns the `tea` token for the Gitea CLI. The public
+repository name, Formula token, and installed executable are therefore
+`teaway`, with no hyphen. The Formula installs only `teaway` and must never
+install a conflicting `tea` executable or alias.
+
+After migration, a user may keep `tea -> teaway` as a local shell alias or
+personal shim. That alias is local configuration, not part of the public
+package. During migration, do not repoint the existing personal `tea` command
+until its legacy power state has been restored.
+
+The `tea-away` name belongs only to the signed 0.2.1 development candidate. It
+is historical evidence, not the public name, Formula token, executable, or an
+upgrade path for `teaway`.
+
+## 0.2.2 target command surface
+
+```sh
+teaway                         # same as status
+teaway on
+teaway off
+teaway status
+
+teaway shutdown after 2h
+teaway shutdown status
+teaway shutdown cancel
+
+teaway version
+```
+
+`on` owns a reversible awake-state change. It records the setting it observed
+before enabling lid-closed operation. `off` restores only a setting owned by
+that native record; with no native-owned record it is a no-op and must not clear
+an externally managed `SleepDisabled=1` value.
+
+Shutdown is independent of `on` and `off`. `shutdown after` resolves a duration
+such as `30m` or `2h` to an absolute local deadline and requires explicit human
+confirmation before visible macOS authorization. `shutdown cancel` may cancel
+only the single matching `teaway`-owned event. `off` never silently cancels a
+scheduled shutdown.
+
+Reminders, open-lid display-off timing, Low Power Mode integration, and the old
+AC server profile are compatibility candidates for later releases. They are not
+part of the 0.2.2 public command surface.
+
+## Migration from the personal script
+
+If migrating from a personal shell implementation, an observed
+`SleepDisabled=1` remains legacy or externally owned; `teaway` must not adopt
+it without an owned awake snapshot. Restore the legacy state explicitly with
+that script's full path before using the native implementation:
+
+```sh
+/path/to/legacy/tea status
+/path/to/legacy/tea off
+```
+
+Do not use the shorthand `tea` for this handoff: it may later become the local
+alias for `teaway`. Native `off` must not adopt or reset legacy state
+automatically, and `teaway` does not import or delete shell state. Verify the
+restored baseline before repointing a local alias. Retain the original script
+as an explicit rollback path until migration is complete.
+
+The signed `tea-away-0.2.0-macos-arm64-development.zip` is retained only as
+historical evidence of the rejected session-prototype direction. The signed
+0.2.1 `tea-away` development candidate corrected the product direction but
+predates the final naming contract. Neither artifact may be published, placed
+in a tap, or represented as a `teaway` release.
+
+## Build and validation
+
+The next native target is version 0.2.2 under the canonical name:
+
+```sh
+swift test
+swift build -c release --product teaway
+./scripts/package-development.zsh 0.2.2
+```
+
+The development archive may be signed with the selected Apple Development
+identity and hardened runtime for local validation only. Apple Development is
+not Developer ID, does not make the archive suitable for public distribution,
+and does not replace notarization.
+
+The development archive is local validation evidence, not the Homebrew source
+asset. Homebrew builds from the immutable GitHub source tag.
+
+## Homebrew direction
+
+The source Formula target is
+[`packaging/Formula/teaway.rb.in`](packaging/Formula/teaway.rb.in). It builds
+the native `teaway` executable from source and its test invokes only read-only
+`version` and `status` commands. The earlier hyphenated Formula template belongs
+to the historical 0.2.1 candidate and must not be published under either name.
+
+Install the source release from the personal tap:
+
+```sh
+brew install soundadam/tap/teaway
+```
+
+To render the Formula for a tagged release:
+
+```sh
+./scripts/render-formula.zsh OWNER/REPO 0.2.2 SHA256 SPDX-LICENSE
+```
+
+The project is distributed under the [MIT License](LICENSE). Real-hardware
+lid-close and shutdown acceptance remains an explicit operator test; package
+installation never changes power state.
+
+See [`docs/product-design.md`](docs/product-design.md),
+[`docs/security.md`](docs/security.md), and
+[`docs/release-readiness.md`](docs/release-readiness.md).

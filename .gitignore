@@ -1,0 +1,7 @@
+/dist/
+/.build/
+/bin/
+/tests/test-tea.zsh
+/tests/fixtures/
+/packaging/Formula/tea.rb.in
+/scripts/package-release.zsh

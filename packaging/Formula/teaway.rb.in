@@ -1,0 +1,21 @@
+class Teaway < Formula
+  desc "Keep a closed Mac awake and schedule explicit delayed shutdowns"
+  homepage "https://github.com/@REPOSITORY@"
+  url "https://github.com/@REPOSITORY@/archive/refs/tags/v@VERSION@.tar.gz"
+  sha256 "@SHA256@"
+  license "@LICENSE@"
+
+  depends_on xcode: ["15.0", :build]
+  depends_on macos: :ventura
+
+  def install
+    system "swift", "build", "--disable-sandbox", "-c", "release", "--product", "teaway"
+    bin.install ".build/release/teaway"
+  end
+
+  test do
+    ENV["TEAWAY_STATE_DIR"] = testpath/"state"
+    assert_match "teaway #{version}", shell_output("#{bin}/teaway version")
+    assert_match "teaway:", shell_output("#{bin}/teaway status")
+  end
+end
