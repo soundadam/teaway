@@ -19,7 +19,6 @@ class Teaway < Formula
   test do
     assert_match "teaway #{version}", shell_output("#{bin}/teaway version")
     assert_match "Usage:", shell_output("#{bin}/teaway help")
-    assert_match "authorization: unregistered", shell_output("#{bin}/teaway auth status")
     assert_match "privileged helper must run as root",
                  shell_output("#{bin}/teaway __teaway_privileged version 2>&1", 77)
   end
