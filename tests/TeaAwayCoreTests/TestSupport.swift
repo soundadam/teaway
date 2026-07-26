@@ -23,6 +23,46 @@ final class FakeExecutor: ProcessExecuting, @unchecked Sendable {
   }
 }
 
+func ordinarySudoPrivilegeExecutor(
+  _ executor: any ProcessExecuting
+) -> SystemPrivilegedCommandExecutor {
+  SystemPrivilegedCommandExecutor(
+    executor: executor,
+    fileExists: { _ in false }
+  )
+}
+
+final class FakePrivilegeRegistrationService: PrivilegeRegistering, @unchecked Sendable {
+  var statusValue: PrivilegeRegistrationStatus = .unregistered
+  var touchIDStatusValue: SudoTouchIDStatus = .disabled
+  var registerResult = PrivilegeRegistrationResult(
+    helperPath: "/Library/PrivilegedHelperTools/com.soundadam.teaway.helper.501",
+    sudoersPath: "/etc/sudoers.d/soundadam-teaway-501",
+    helperVersion: TeaAwayVersion.current
+  )
+  private(set) var registerCalls = 0
+  private(set) var unregisterCalls = 0
+
+  func status() throws -> PrivilegeRegistrationStatus {
+    statusValue
+  }
+
+  func sudoTouchIDStatus() -> SudoTouchIDStatus {
+    touchIDStatusValue
+  }
+
+  func register() throws -> PrivilegeRegistrationResult {
+    registerCalls += 1
+    statusValue = .registered(helperVersion: registerResult.helperVersion)
+    return registerResult
+  }
+
+  func unregister() throws {
+    unregisterCalls += 1
+    statusValue = .unregistered
+  }
+}
+
 struct FixedClock: TeaAwayClock {
   let now: Date
 }

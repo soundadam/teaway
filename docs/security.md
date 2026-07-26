@@ -3,9 +3,44 @@
 ## Trust boundary
 
 `teaway` changes macOS power behavior only after an explicit command. It does
-not install a privileged helper, LaunchDaemon, sudoers rule, setuid executable,
-password cache, listener, or cloud control plane. Privileged operations use
-fixed macOS system paths and an ordinary visible authorization prompt.
+not install a LaunchDaemon, setuid executable, password cache, listener, or
+cloud control plane. It never reads, stores, logs, or pipes an administrator
+password. Privileged operations use fixed macOS system paths.
+
+Without registration, `teaway` uses ordinary system `sudo`: it validates the
+current credential with `sudo -v`, preserves any valid sudo timestamp, and then
+executes one fixed `pmset` operation. It does not use `sudo -k`, so it does not
+force macOS to discard an existing authorization timestamp before every
+operation. Authentication method selection remains the responsibility of the
+local macOS PAM configuration; this includes Touch ID when enabled for `sudo`.
+`teaway auth status` reports the observed Touch ID rule but never edits PAM.
+
+The optional `teaway auth register` command makes a separate, explicit trust
+decision. After visible administrator authorization, it installs:
+
+- a per-user, root-owned executable under `/Library/PrivilegedHelperTools`; and
+- a per-user, root-owned rule under `/etc/sudoers.d`.
+
+The sudoers rule permits passwordless execution only of the hidden helper
+protocol. It does not permit arbitrary public `teaway` commands, arbitrary
+`pmset` arguments, a shell, or another executable. The helper accepts only:
+
+1. `disablesleep` values `0` and `1`;
+2. one canonical `teaway:` shutdown tuple with an exact date format; and
+3. exact cancellation of canonical or recorded legacy `tea-away:` shutdown
+   tuples.
+
+Every dynamic field is parsed again by the root-owned helper before `pmset` is
+invoked. A malformed operation fails closed. `teaway auth status` verifies that
+the helper version matches the invoking CLI, and `teaway auth unregister`
+removes both installed files.
+
+Registration delegates these narrow operations to the entire macOS account,
+not solely to one terminal process. Any process running as that user can invoke
+the allowed helper commands. Registration is therefore inappropriate for a
+shared or untrusted account. A future signed app-bundle distribution may move
+this boundary to a launchd/XPC helper with code-signature validation; the
+source-built Homebrew CLI does not claim that stronger identity boundary.
 
 `status` and `version` are read-only. They must not modify power settings,
 schedule an event, or cancel an event. A Homebrew test is restricted to those

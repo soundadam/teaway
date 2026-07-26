@@ -29,7 +29,7 @@ The retired `tea-away` name is not a public name, Formula token, executable, or
 upgrade path for `teaway`. No legacy binary is retained in the active checkout,
 release archive, or Homebrew package.
 
-## 0.2.3 command surface
+## Current command surface
 
 ```sh
 teaway                         # same as status
@@ -40,6 +40,10 @@ teaway status
 teaway shutdown after 2h
 teaway shutdown status
 teaway shutdown cancel
+
+teaway auth status
+teaway auth register
+teaway auth unregister
 
 teaway version
 ```
@@ -55,9 +59,33 @@ confirmation before visible macOS authorization. `shutdown cancel` may cancel
 only the single matching `teaway`-owned event. `off` never silently cancels a
 scheduled shutdown.
 
+By default, privileged changes use ordinary system `sudo`. `teaway` validates
+authorization with `sudo -v` but does not invalidate an existing sudo timestamp,
+store a password, or pipe a password through the process. A Mac whose local PAM
+configuration enables Touch ID for `sudo` may satisfy that authorization with
+Touch ID.
+
+`teaway auth status` also reports whether the local sudo PAM configuration has
+an active Touch ID rule. It is diagnostic only: `teaway` does not rewrite PAM
+configuration or silently broaden system-wide authentication policy.
+
+`teaway auth register` is an explicit opt-in for repeated local use. It requests
+administrator authorization once, installs a per-user root-owned copy of the
+current executable under `/Library/PrivilegedHelperTools`, and installs a
+matching `/etc/sudoers.d` rule. The rule permits only the hidden helper protocol
+for `disablesleep` and exact `teaway` shutdown operations; it does not grant
+passwordless execution of arbitrary `pmset`, shells, or the public CLI. Use
+`teaway auth status` to inspect the installation and `teaway auth unregister`
+to remove it.
+
+The registered authorization is a machine-level trust decision: any process
+running as that macOS user can invoke the narrow helper operations. Do not
+register it on a shared or untrusted account. See
+[`docs/authorization.md`](docs/authorization.md) for the complete boundary.
+
 Reminders, open-lid display-off timing, Low Power Mode integration, and the old
 AC server profile are compatibility candidates for later releases. They are not
-part of the 0.2.3 public command surface.
+part of the current public command surface.
 
 ## Migration from the personal script
 

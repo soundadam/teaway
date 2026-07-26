@@ -9,8 +9,31 @@ final class ApplicationTests: XCTestCase {
     defer { removeTemporaryStore(fixture.directory) }
 
     XCTAssertEqual(fixture.application.run(arguments: ["version"]), 0)
-    XCTAssertEqual(fixture.output, ["teaway 0.2.3"])
+    XCTAssertEqual(fixture.output, ["teaway 0.3.0-dev"])
     XCTAssertTrue(fixture.errors.isEmpty)
+  }
+
+  func testAuthorizationStatusAndRegistrationCommands() throws {
+    let fixture = try makeApplicationFixture()
+    defer { removeTemporaryStore(fixture.directory) }
+
+    XCTAssertEqual(fixture.application.run(arguments: ["auth", "status"]), 0)
+    XCTAssertTrue(fixture.output.contains("authorization: unregistered"))
+    XCTAssertTrue(
+      fixture.output.contains("mode: ordinary sudo with the system credential cache")
+    )
+    XCTAssertTrue(fixture.output.contains("touch id for sudo: not configured"))
+
+    XCTAssertEqual(fixture.application.run(arguments: ["auth", "register"]), 0)
+    XCTAssertEqual(fixture.privilegeRegistration.registerCalls, 1)
+    XCTAssertTrue(fixture.output.contains("authorization: registered"))
+    XCTAssertTrue(fixture.output.contains("helper version: 0.3.0-dev"))
+    XCTAssertTrue(
+      fixture.output.contains("scope: disablesleep and teaway-owned shutdown operations only")
+    )
+
+    XCTAssertEqual(fixture.application.run(arguments: ["auth", "unregister"]), 0)
+    XCTAssertEqual(fixture.privilegeRegistration.unregisterCalls, 1)
   }
 
   func testNoArgumentsIsTopLevelStatus() throws {
@@ -194,20 +217,24 @@ final class ApplicationTests: XCTestCase {
     let shutdownChallenger = FixedShutdownChallenger(
       confirmed: shutdownChallengeConfirmed
     )
+    let privilegeRegistration = FakePrivilegeRegistrationService()
     let application = TeaAwayApplication(
       powerService: PowerService(
         store: store,
         executor: executor,
+        privilegedExecutor: ordinarySudoPrivilegeExecutor(executor),
         clock: clock
       ),
       shutdownService: ShutdownService(
         store: store,
         executor: executor,
+        privilegedExecutor: ordinarySudoPrivilegeExecutor(executor),
         clock: clock,
         identifiers: FixedIdentifierGenerator(value: "action-1"),
         timeZone: TimeZone(secondsFromGMT: 0)!
       ),
       shutdownChallenger: shutdownChallenger,
+      privilegeRegistrationService: privilegeRegistration,
       output: { output.append($0) },
       errorOutput: { errors.append($0) },
       timeZone: TimeZone(secondsFromGMT: 0)!,
@@ -218,6 +245,7 @@ final class ApplicationTests: XCTestCase {
       store: store,
       executor: executor,
       shutdownChallenger: shutdownChallenger,
+      privilegeRegistration: privilegeRegistration,
       directory: directory,
       outputReader: { output },
       errorReader: { errors }
@@ -226,7 +254,6 @@ final class ApplicationTests: XCTestCase {
 
   private func privilegedMutationCommands(value: Int) -> [ExternalCommand] {
     [
-      ExternalCommand(SystemCommand.sudo, ["-k"]),
       ExternalCommand(SystemCommand.sudo, ["-v"]),
       ExternalCommand(
         SystemCommand.sudo,
@@ -242,7 +269,6 @@ final class ApplicationTests: XCTestCase {
     }
     arguments += ["shutdown", "11/14/23 22:23:20", "teaway:action-1"]
     return [
-      ExternalCommand(SystemCommand.sudo, ["-k"]),
       ExternalCommand(SystemCommand.sudo, ["-v"]),
       ExternalCommand(SystemCommand.sudo, arguments),
     ]
@@ -254,6 +280,7 @@ private final class ApplicationFixture {
   let store: StateStore
   let executor: FakeExecutor
   let shutdownChallenger: FixedShutdownChallenger
+  let privilegeRegistration: FakePrivilegeRegistrationService
   let directory: URL
   private let outputReader: () -> [String]
   private let errorReader: () -> [String]
@@ -263,6 +290,7 @@ private final class ApplicationFixture {
     store: StateStore,
     executor: FakeExecutor,
     shutdownChallenger: FixedShutdownChallenger,
+    privilegeRegistration: FakePrivilegeRegistrationService,
     directory: URL,
     outputReader: @escaping () -> [String],
     errorReader: @escaping () -> [String]
@@ -271,6 +299,7 @@ private final class ApplicationFixture {
     self.store = store
     self.executor = executor
     self.shutdownChallenger = shutdownChallenger
+    self.privilegeRegistration = privilegeRegistration
     self.directory = directory
     self.outputReader = outputReader
     self.errorReader = errorReader

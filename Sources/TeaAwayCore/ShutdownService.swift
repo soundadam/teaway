@@ -34,6 +34,7 @@ public final class ShutdownService: @unchecked Sendable {
 
   private let store: StateStore
   private let executor: any ProcessExecuting
+  private let privilegedExecutor: any PrivilegedCommandExecuting
   private let clock: any TeaAwayClock
   private let identifiers: any IdentifierGenerating
   private let dateFormatter: DateFormatter
@@ -43,6 +44,7 @@ public final class ShutdownService: @unchecked Sendable {
   public init(
     store: StateStore,
     executor: any ProcessExecuting,
+    privilegedExecutor: (any PrivilegedCommandExecuting)? = nil,
     clock: any TeaAwayClock = SystemClock(),
     identifiers: any IdentifierGenerating = UUIDIdentifierGenerator(),
     timeZone: TimeZone = .current,
@@ -50,6 +52,8 @@ public final class ShutdownService: @unchecked Sendable {
   ) {
     self.store = store
     self.executor = executor
+    self.privilegedExecutor =
+      privilegedExecutor ?? SystemPrivilegedCommandExecutor(executor: executor)
     self.clock = clock
     self.identifiers = identifiers
     self.dateFormatter = DateFormatter()
@@ -128,13 +132,8 @@ public final class ShutdownService: @unchecked Sendable {
 
       let target = try targetEvent(for: record)
       do {
-        _ = try executor.checkedInteractiveRun(ExternalCommand(SystemCommand.sudo, ["-k"]))
-        _ = try executor.checkedInteractiveRun(ExternalCommand(SystemCommand.sudo, ["-v"]))
-        _ = try executor.checkedInteractiveRun(
-          ExternalCommand(
-            SystemCommand.sudo,
-            [SystemCommand.pmset] + scheduleArguments(for: target, cancel: false)
-          )
+        try privilegedExecutor.run(
+          .scheduleShutdown(date: target.date, owner: target.owner)
         )
       } catch {
         try recoverAfterScheduleFailure(record: record, state: &state, cause: error)
@@ -245,13 +244,8 @@ public final class ShutdownService: @unchecked Sendable {
 
       if let event = ownerEvents.first {
         do {
-          _ = try executor.checkedInteractiveRun(ExternalCommand(SystemCommand.sudo, ["-k"]))
-          _ = try executor.checkedInteractiveRun(ExternalCommand(SystemCommand.sudo, ["-v"]))
-          _ = try executor.checkedInteractiveRun(
-            ExternalCommand(
-              SystemCommand.sudo,
-              [SystemCommand.pmset] + scheduleArguments(for: event, cancel: true)
-            )
+          try privilegedExecutor.run(
+            .cancelShutdown(date: event.date, owner: event.owner)
           )
         } catch {
           throw TeaAwayError.shutdownRecoveryRequired(
@@ -290,7 +284,7 @@ public final class ShutdownService: @unchecked Sendable {
   static func parseScheduleOutput(_ output: String) throws -> [SystemScheduledPowerEvent] {
     let expression = try NSRegularExpression(
       pattern:
-        #"^\s*\[[0-9]+\]\s+(sleep|wake|poweron|shutdown|wakeorpoweron)\s+at\s+([0-9]{2}/[0-9]{2}/[0-9]{2}\s+[0-9]{2}:[0-9]{2}:[0-9]{2})\s+by\s+'([^']+)'(?:\s+leeway secs:\s+[0-9]+)?(?:\s+User visible:\s+true)?\s*$"#,
+        #"^\s*\[[0-9]+\]\s+(sleep|wake|poweron|shutdown|wakeorpoweron)\s+at\s+([0-9]{2}/[0-9]{2}/[0-9]{2}(?:[0-9]{2})?\s+[0-9]{2}:[0-9]{2}:[0-9]{2})\s+by\s+'([^']+)'(?:\s+leeway secs:\s+[0-9]+)?(?:\s+User visible:\s+true)?\s*$"#,
       options: [.caseInsensitive]
     )
     let eventPrefix = try NSRegularExpression(pattern: #"^\s*\[[0-9]+\]"#)
@@ -337,12 +331,20 @@ public final class ShutdownService: @unchecked Sendable {
       events.append(
         SystemScheduledPowerEvent(
           type: text[typeRange].lowercased(),
-          date: String(text[dateRange]),
+          date: normalizeScheduleDate(String(text[dateRange])),
           owner: String(text[ownerRange])
         )
       )
     }
     return events
+  }
+
+  private static func normalizeScheduleDate(_ value: String) -> String {
+    let fields = value.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+    guard fields.count == 2 else { return value }
+    let dateFields = fields[0].split(separator: "/", omittingEmptySubsequences: false)
+    guard dateFields.count == 3, dateFields[2].count == 4 else { return value }
+    return "\(dateFields[0])/\(dateFields[1])/\(dateFields[2].suffix(2)) \(fields[1])"
   }
 
   private func validatePlan(_ record: ShutdownRecord) throws {
@@ -376,15 +378,6 @@ public final class ShutdownService: @unchecked Sendable {
       throw TeaAwayError.shutdownScheduleVerificationFailed(record.id)
     }
     return SystemScheduledPowerEvent(type: "shutdown", date: date, owner: record.owner)
-  }
-
-  private func scheduleArguments(for event: SystemScheduledPowerEvent, cancel: Bool) -> [String] {
-    var arguments = ["schedule"]
-    if cancel {
-      arguments.append("cancel")
-    }
-    arguments += [event.type, event.date, event.owner]
-    return arguments
   }
 
   private func recoverAfterScheduleFailure(
@@ -421,13 +414,9 @@ public final class ShutdownService: @unchecked Sendable {
     state: inout TeaAwayState,
     cause: Error
   ) throws -> Never {
-    let cancellation: CommandResult
     do {
-      cancellation = try executor.runInteractive(
-        ExternalCommand(
-          SystemCommand.sudo,
-          [SystemCommand.pmset] + scheduleArguments(for: event, cancel: true)
-        )
+      try privilegedExecutor.run(
+        .cancelShutdown(date: event.date, owner: event.owner)
       )
     } catch {
       throw TeaAwayError.shutdownRecoveryRequired(
@@ -435,13 +424,6 @@ public final class ShutdownService: @unchecked Sendable {
         "Automatic compensation could not start: \(error.localizedDescription)"
       )
     }
-    guard cancellation.exitCode == 0 else {
-      throw TeaAwayError.shutdownRecoveryRequired(
-        record.id,
-        "Automatic compensation failed with exit code \(cancellation.exitCode)."
-      )
-    }
-
     let remainingEvents: [SystemScheduledPowerEvent]
     do {
       remainingEvents = try inspectSystemSchedule()

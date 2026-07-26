@@ -54,7 +54,6 @@ final class ShutdownServiceTests: XCTestCase {
     XCTAssertEqual(
       executor.interactiveRunCommands,
       [
-        ExternalCommand(SystemCommand.sudo, ["-k"]),
         ExternalCommand(SystemCommand.sudo, ["-v"]),
         scheduleCommand(cancel: false),
       ]
@@ -72,6 +71,7 @@ final class ShutdownServiceTests: XCTestCase {
     let expiredService = ShutdownService(
       store: store,
       executor: executor,
+      privilegedExecutor: ordinarySudoPrivilegeExecutor(executor),
       clock: FixedClock(now: now.addingTimeInterval(301)),
       identifiers: FixedIdentifierGenerator(value: "unused"),
       timeZone: utc
@@ -109,7 +109,6 @@ final class ShutdownServiceTests: XCTestCase {
     XCTAssertEqual(
       executor.interactiveRunCommands,
       [
-        ExternalCommand(SystemCommand.sudo, ["-k"]),
         ExternalCommand(SystemCommand.sudo, ["-v"]),
       ]
     )
@@ -208,6 +207,74 @@ final class ShutdownServiceTests: XCTestCase {
     )
   }
 
+  func testParserAcceptsMacOS26FourDigitYearWakeEvents() throws {
+    let events = try ShutdownService.parseScheduleOutput(
+      scheduleOutput(
+        "[0]  wake at 07/27/2026 04:32:58 by 'com.apple.alarm.user-invisible.com.apple.calaccessd.travelEngine.periodicRefreshTimer'",
+        "[1]  wake at 07/27/2026 07:52:01 by 'com.apple.alarm.user-invisible.com.apple.osanalytics.hardhighengagementtimer'"
+      )
+    )
+
+    XCTAssertEqual(
+      events,
+      [
+        SystemScheduledPowerEvent(
+          type: "wake",
+          date: "07/27/26 04:32:58",
+          owner: "com.apple.alarm.user-invisible.com.apple.calaccessd.travelEngine.periodicRefreshTimer"
+        ),
+        SystemScheduledPowerEvent(
+          type: "wake",
+          date: "07/27/26 07:52:01",
+          owner: "com.apple.alarm.user-invisible.com.apple.osanalytics.hardhighengagementtimer"
+        ),
+      ]
+    )
+  }
+
+  func testStatusAndCancelNormalizeMacOSFourDigitYearForExactTuple() throws {
+    let (store, directory) = try makeTemporaryStore()
+    defer { removeTemporaryStore(directory) }
+    let record = makeRecord(phase: .committed)
+    let canonicalDate = try XCTUnwrap(record.systemScheduleDate)
+    let fourDigitDate = canonicalDate.replacingOccurrences(of: "/23 ", with: "/2023 ")
+    try store.save(TeaAwayState(shutdown: record))
+    let executor = FakeExecutor()
+    var inspection = 0
+    executor.runHandler = { _ in
+      inspection += 1
+      let output =
+        inspection < 3
+        ? self.scheduleOutput(
+          "[0] shutdown at \(fourDigitDate) by '\(self.owner)'"
+        )
+        : self.scheduleOutput()
+      return CommandResult(exitCode: 0, standardOutput: output)
+    }
+    let service = makeService(store: store, executor: executor)
+
+    XCTAssertEqual(
+      try service.status(),
+      ShutdownStatus(observation: .scheduled, record: record)
+    )
+    XCTAssertEqual(try service.cancel(actionID: record.id), record)
+    XCTAssertEqual(
+      executor.interactiveRunCommands.last,
+      ExternalCommand(
+        SystemCommand.sudo,
+        [
+          SystemCommand.pmset,
+          "schedule",
+          "cancel",
+          "shutdown",
+          canonicalDate,
+          owner,
+        ]
+      )
+    )
+    XCTAssertNil(try store.load().shutdown)
+  }
+
   func testStatusDoesNotCombineOwnerFromWakeLineWithAnotherShutdownLine() throws {
     let (store, directory) = try makeTemporaryStore()
     defer { removeTemporaryStore(directory) }
@@ -268,7 +335,6 @@ final class ShutdownServiceTests: XCTestCase {
     XCTAssertEqual(
       executor.interactiveRunCommands,
       [
-        ExternalCommand(SystemCommand.sudo, ["-k"]),
         ExternalCommand(SystemCommand.sudo, ["-v"]),
         scheduleCommand(cancel: true),
       ]
@@ -451,6 +517,7 @@ final class ShutdownServiceTests: XCTestCase {
     ShutdownService(
       store: store,
       executor: executor,
+      privilegedExecutor: ordinarySudoPrivilegeExecutor(executor),
       clock: FixedClock(now: now),
       identifiers: FixedIdentifierGenerator(value: "action-1"),
       timeZone: utc,

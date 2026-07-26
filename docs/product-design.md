@@ -43,6 +43,8 @@ workspace or package. The current release using the final naming contract is
 5. When desired, `teaway shutdown after 2h` schedules a separate shutdown.
    `shutdown status` inspects it and `shutdown cancel` removes only that exact
    `teaway`-owned event.
+6. Privileged commands preserve the system sudo timestamp by default. A user
+   may explicitly register or remove a per-user narrow helper with `auth`.
 
 ## Public command model
 
@@ -55,6 +57,10 @@ teaway status
 teaway shutdown after DURATION
 teaway shutdown status
 teaway shutdown cancel
+
+teaway auth status
+teaway auth register
+teaway auth unregister
 
 teaway version
 teaway help
@@ -75,6 +81,8 @@ work is complete.
 - Exact pre-change awake snapshot and fail-closed ownership checks.
 - No-op `off` when no native-owned snapshot exists.
 - One `teaway`-owned delayed shutdown with `after`, `status`, and exact `cancel`.
+- Default cached-sudo authorization plus an opt-in per-user helper restricted
+  to `disablesleep` and exact `teaway` shutdown operations.
 - Fixed system executable paths, private atomic state, visible authorization,
   a typed confirmation challenge, and deterministic tests.
 - Real-hardware validation that lid-closed work continues on supported macOS and
