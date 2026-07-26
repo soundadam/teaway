@@ -2,6 +2,13 @@
 
 All notable changes to `teaway` are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- Made the rendered Homebrew Formula tests independent of physical
+  `disablesleep` reporting on hosted macOS runners.
+
 ## [0.3.0] - 2026-07-26
 
 ### Added
