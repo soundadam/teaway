@@ -2,49 +2,58 @@
 
 ## Positioning
 
-`teaway` is a focused macOS power-control CLI:
+`teaway` is the reversible power-control layer for operating a Mac like a small,
+always-on server:
 
-> Keep the Mac running after the lid closes, restore the previous behavior on
-> request, and optionally schedule one explicit shutdown for later.
+> Keep the Mac available when ordinary sleep would interrupt it, including
+> closed-lid portable operation; restore the exact setting owned by the tool;
+> and optionally schedule one explicit delayed shutdown.
 
-The product succeeds when the user can answer three questions immediately:
+The primary audiences are:
 
-1. Is `teaway` currently keeping lid-close sleep disabled?
-2. Can `teaway` restore the exact setting it owns?
-3. Is a `teaway`-owned shutdown scheduled, and when will it happen?
+- a developer using a spare MacBook as a headless build or automation machine;
+- a Mac mini or desktop Mac serving a homelab or self-hosted workload;
+- an operator running a long backup, import, render, transfer, or media job; and
+- a remote user who needs power behavior to remain independent of one terminal.
 
-It is not a development-tool launcher or a remote-access product. The process
-that benefits from the Mac staying awake remains entirely outside `teaway`.
+The product succeeds when the operator can answer four questions immediately:
+
+1. Is the Mac on a supported power source?
+2. Is `teaway` currently responsible for disabling sleep?
+3. Can it restore the exact setting it owns?
+4. Is a `teaway` shutdown scheduled, and can it cancel only that event?
+
+## Product boundary
+
+`teaway` owns power state, not the server workload. It does not configure SSH,
+Screen Sharing, VPNs, firewalls, DNS, launchd services, containers, monitoring,
+backups, or public ports. It does not decide that work is complete from process
+exit, idle time, CPU usage, or network state.
+
+This narrow boundary makes the destructive operations auditable and keeps the
+CLI useful across many server and workstation setups.
 
 ## Naming contract
 
-The publisher brand is `soundadam`; the stable product identity is `teaway`.
-Public package metadata must preserve both spellings exactly.
+The publisher is `soundadam`; the repository, Homebrew Formula token, SwiftPM
+product, and executable are `teaway`. Homebrew installs only `teaway` because
+the `tea` token already belongs to the Gitea CLI. A user-managed local alias may
+point `tea` to `teaway`, but no release creates it.
 
-The canonical public repository, Homebrew Formula token, and executable name
-are `teaway`. Homebrew installs only that executable because Core already owns
-`tea` for the Gitea CLI. `tea` is permitted only as a user-managed local alias
-or personal shim pointing to `teaway`; it is never created by the Formula.
-
-The retired `tea-away` token is not a second public name, compatibility
-executable, or release alias. No legacy binary is retained in the active
-workspace or package. The current release using the final naming contract is
-0.2.3.
+The retired `tea-away` name is accepted only where an exact historical shutdown
+owner must be cancelled safely. It is not a public executable, package, or
+release identity.
 
 ## Primary journey
 
-1. `teaway status` reports the current power source, observed `SleepDisabled`
-   value, native ownership state, and any `teaway`-owned shutdown.
-2. `teaway on` snapshots the current lid-close sleep setting, requests visible
-   authorization, applies the awake setting, verifies it, and records ownership.
-3. The user closes the lid while their existing workload continues independently.
-4. `teaway off` restores the exact saved setting only when native `teaway` owns
-   that snapshot. Without native ownership it reports a no-op.
-5. When desired, `teaway shutdown after 2h` schedules a separate shutdown.
-   `shutdown status` inspects it and `shutdown cancel` removes only that exact
-   `teaway`-owned event.
-6. Privileged commands preserve the system sudo timestamp by default. A user
-   may explicitly register or remove a per-user narrow helper with `auth`.
+1. Install `teaway` and inspect the baseline with `status`.
+2. Optionally register the narrow per-user helper after visible authorization.
+3. Run `on`; the CLI snapshots the current value, applies the new state, verifies
+   it, and records ownership.
+4. Verify remote reachability and allow the workload to continue independently.
+5. Run `off`; the CLI restores only the owned baseline.
+6. When needed, schedule one explicit delayed shutdown and cancel only its exact
+   tuple.
 
 ## Public command model
 
@@ -66,80 +75,57 @@ teaway version
 teaway help
 ```
 
-No argument is equivalent to `status`. Durations use explicit units such as
-`30m`, `2h`, or `1d`. Relative shutdown durations are always rendered as an
-absolute local time with timezone before authorization.
+No argument is equivalent to `status`. Durations require units and are rendered
+as an absolute local deadline with timezone before confirmation. `on` remains
+enabled until `off` or system power-off; shutdown scheduling is independent.
 
-`on` has no duration. It remains enabled until `off` or system power-off.
-Automatic shutdown is expressed only through the separate `shutdown after`
-command. `off` does not cancel shutdown, and shutdown does not infer that other
-work is complete.
+## Guarantees
 
-## 0.2.3 scope
+- Read-only commands do not request authorization or mutate power state.
+- `on` requires AC power, persists intent before mutation, and verifies the live
+  state before reporting success.
+- `off` restores only a matching native-owned snapshot.
+- A live external `disablesleep=1` value is never adopted implicitly.
+- Shutdown scheduling requires a real TTY and the complete displayed phrase.
+- At most one `teaway` shutdown exists, and cancellation uses its exact tuple.
+- Private state is atomic and mode-restricted.
+- Privileged execution uses fixed system paths and allowlisted operations.
+- Registered mode delegates narrow operations to one macOS account, never an
+  arbitrary shell or arbitrary `pmset` invocation.
 
-- Native `on`, `off`, and consolidated read-only `status` under `teaway`.
-- Exact pre-change awake snapshot and fail-closed ownership checks.
-- No-op `off` when no native-owned snapshot exists.
-- One `teaway`-owned delayed shutdown with `after`, `status`, and exact `cancel`.
-- Default cached-sudo authorization plus an opt-in per-user helper restricted
-  to `disablesleep` and exact `teaway` shutdown operations.
-- Fixed system executable paths, private atomic state, visible authorization,
-  a typed confirmation challenge, and deterministic tests.
-- Real-hardware validation that lid-closed work continues on supported macOS and
-  hardware, followed by exact restoration testing.
-- A source Formula named `teaway` and a local Apple Development-signed archive
-  for development validation.
-- An optional user-managed local `tea -> teaway` alias that is excluded from the
-  Formula and release archive.
+## 0.3.0 scope
 
-## Deferred compatibility
+Version 0.3.0 establishes the server-oriented release line:
 
-The personal script also contains useful secondary behavior. It should be
-evaluated after the corrected core is proven:
+- registered per-user authorization with a root-owned narrow helper;
+- ordinary sudo mode that preserves the system credential timestamp;
+- reversible awake ownership and fail-closed recovery journals;
+- exact delayed-shutdown transactions and macOS 26 schedule normalization;
+- GitHub-hosted macOS CI with read-only workflow permissions;
+- source-tag distribution through GitHub and Homebrew; and
+- operator, authorization, security, migration, and release documentation.
 
-- periodic notification and Glass reminder, exposed as an `on` option rather
-  than a command family;
-- an open-lid display-off timer;
-- optional Low Power Mode capture and restoration;
-- the AC-only server profile that changes sleep, display sleep, disk sleep,
-  network wake, TCP keepalive, and TTY wake settings;
-- a reminder-sound diagnostic command.
+## Deferred work
 
-These features must preserve exact prior settings and roll back partial failure.
-The server profile in particular should not enter the default path because it
-changes several unrelated system-wide settings.
+Possible additions must remain opt-in and independently reversible:
 
-## Migration contract
+- display-off timing while the lid is open;
+- Low Power Mode capture and exact restoration;
+- reminders for unattended closed-lid operation;
+- an AC server profile covering several additional `pmset` values; and
+- a signed/notarized app bundle with an XPC helper and code-signature validation.
 
-An existing `SleepDisabled=1` observation without a native ownership record is
-legacy or external state, not native `teaway` state. Native `off` must therefore
-be a no-op rather than resetting it.
+The multi-setting server profile is intentionally excluded from the default
+path because it changes unrelated system-wide policy. A future implementation
+must snapshot every allowlisted value and roll back partial failure.
 
-Before cutover, the user runs the original personal command by its full path:
+## Non-goals
 
-```sh
-/path/to/legacy/tea status
-/path/to/legacy/tea off
-```
+- Workload startup, supervision, interpretation, or completion detection.
+- Remote-access, credential, tunnel, firewall, or network configuration.
+- Cloud control, a browser dashboard, phone app, or multi-machine controller.
+- Silent installation, silent privilege broadening, or hidden PAM changes.
+- Unbounded shutdown scheduling or cancellation of unrelated system events.
 
-Only after the legacy state is restored and verified should `teaway on`
-establish its own snapshot. Native `teaway` does not import, rewrite, or delete
-shell snapshot files. Do not repoint the local `tea` alias during this handoff;
-after cutover it may point to `teaway`. Once migration is verified, remove the
-legacy script, binary, state directory, and compatibility entrypoints.
-
-Retired `tea` and `tea-away` artifacts are not publishable and are not retained
-in the active workspace. The canonical `teaway` product began its stable source
-release line at 0.2.2 and continues as the product identity in 0.2.3.
-
-## Explicit non-goals
-
-- Starting, stopping, supervising, or interpreting user workloads.
-- Configuring remote access, networking, credentials, tunnels, or public ports.
-- Multiple machines, a cloud controller, browser dashboard, or phone app.
-- A privileged helper, LaunchDaemon, sudoers rule, password cache, or unattended
-  conditional automation.
-- Deciding that work is complete from idle time, process exit, or network state.
-
-The smallest trustworthy implementation is preferred: one reversible awake
-state and one independently owned shutdown event.
+The preferred implementation remains the smallest trustworthy mechanism that
+makes a Mac's power behavior explicit and reversible.

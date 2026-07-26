@@ -69,6 +69,9 @@ jobs:
       - name: Validate package manifest
         run: swift package dump-package >/dev/null
 
+      - name: Validate documentation
+        run: python3 scripts/check-documentation.py
+
       - name: Run tests
         run: swift test
 

@@ -2,37 +2,33 @@
 
 ## Goals
 
-`teaway` needs administrator privileges only for the `pmset` mutations that
-change lid-close sleep behavior or create/cancel one exact scheduled shutdown.
-Read-only status and version commands remain unprivileged.
+Administrator privileges are required only for the `pmset` mutations that
+change sleep behavior or create/cancel one exact delayed shutdown. Read-only
+status and version commands remain unprivileged.
 
-The authorization design has two modes:
+The design provides:
 
 1. ordinary `sudo`, with the system credential cache preserved; and
-2. an optional, explicitly registered, passwordless narrow helper.
+2. an optional explicitly registered per-user helper.
 
 Neither mode reads, stores, transmits, or logs an administrator password.
 
 ## Default mode: ordinary sudo
 
-An unregistered installation performs this sequence for a privileged mutation:
+For a mutation, an unregistered installation:
 
-1. run `sudo -v` interactively;
-2. recheck any safety precondition that could have changed while the user was
-   authenticating, such as AC power for `teaway on`;
-3. invoke one fixed `/usr/bin/pmset` operation through `sudo`; and
-4. verify the resulting macOS state before reporting success.
+1. runs `sudo -v` interactively;
+2. rechecks safety preconditions that may have changed during authentication;
+3. invokes one fixed `/usr/bin/pmset` operation through `sudo`; and
+4. verifies the resulting macOS state.
 
-The implementation never invokes `sudo -k`. A valid sudo timestamp can therefore
-be reused according to the local sudo policy. Touch ID is available only when
-the Mac administrator has enabled `pam_tid.so` for `sudo`; `teaway` does not
-modify PAM configuration automatically. `teaway auth status` reports whether an
-active `auth sufficient pam_tid.so` rule is visible in `sudo_local` or `sudo`.
+The implementation never invokes `sudo -k`. Touch ID is available only when the
+administrator has enabled `pam_tid.so` for sudo. `teaway auth status` reports an
+active rule when it can read one, but never changes PAM configuration.
 
 ## Registered mode
 
-`teaway auth register` requests interactive administrator authorization and
-installs two per-user files:
+`teaway auth register` requests visible administrator authorization and installs:
 
 ```text
 /Library/PrivilegedHelperTools/com.soundadam.teaway.helper.<uid>
@@ -41,17 +37,17 @@ installs two per-user files:
 
 The helper is a root-owned copy of the exact executable that performed
 registration. The sudoers rule is validated before and after installation. The
-CLI checks the helper version before treating the registration as healthy.
+CLI checks that the root helper reports the same `teaway` version before using
+registered mode.
 
-Registered mutations use `sudo -n` and the hidden helper entry point. They do
-not prompt for a password or Touch ID while the registration remains healthy.
+Registered mutations use `sudo -n` and do not prompt for a password or Touch ID
+while the installation remains healthy.
 
-## Allowed operations
+## Delegated operations
 
-The helper protocol accepts only these operation classes:
+The sudoers rule permits only:
 
 ```text
-probe
 version
 set-disablesleep 0
 set-disablesleep 1
@@ -60,53 +56,50 @@ cancel-shutdown MM/DD/YY HH:MM:SS teaway:<identifier>
 cancel-shutdown MM/DD/YY HH:MM:SS tea-away:<legacy-identifier>
 ```
 
-The root-owned process validates:
+A hidden root-only `probe` parser case exists for internal diagnostics but is
+not included in the passwordless sudoers rule.
 
-- the exact argument count;
-- the allowlisted operation name;
-- a strict `MM/dd/yy HH:mm:ss` date round trip;
-- a canonical owner for new schedules;
-- a canonical or recorded legacy owner for cancellation; and
-- an ASCII alphanumeric/hyphen identifier of bounded length.
-
-It then invokes the fixed path `/usr/bin/pmset` without a shell. Unsupported,
+The helper validates exact arity, allowlisted operation, canonical two-digit
+year date round trips, owner prefix, and a bounded ASCII alphanumeric/hyphen
+identifier. It then invokes `/usr/bin/pmset` without a shell. Unsupported,
 malformed, or extra arguments fail closed.
+
+macOS may display scheduled events with a four-digit year. The unprivileged CLI
+normalizes that display to the canonical two-digit tuple before requesting an
+exact helper cancellation; the root helper does not accept ambiguous display
+formats directly.
 
 ## Account-level risk
 
-The sudoers rule identifies a macOS user, not the parent terminal or a specific
-calling binary. After registration, any process running as that user can invoke
-the allowlisted helper operations. The rule cannot run a shell and cannot pass
-arbitrary `pmset` arguments, but it can still disable lid-close sleep or create
-and cancel a conforming `teaway` shutdown.
+The sudoers rule identifies a macOS user, not a terminal or calling binary.
+After registration, any process running as that user can disable sleep or create
+and cancel a conforming `teaway` shutdown. It still cannot run a shell or pass
+arbitrary `pmset` arguments.
 
-Registration should therefore be used only on a trusted, single-user account.
-It should not be enabled on shared accounts or machines where untrusted code is
-routinely executed under the same user.
+Use registered mode only on a trusted single-user account. Shared or untrusted
+accounts should use ordinary sudo.
 
-## Removal and repair
+## Upgrade, repair, and removal
 
 ```sh
 teaway auth status
+teaway auth register
 teaway auth unregister
 ```
 
-`status` reports one of:
+Status is:
 
-- `unregistered`: both machine-level files are absent;
-- `registered`: the helper is authorized and its version matches the CLI; or
-- `needs-repair`: installation is partial, authorization failed, or versions
-  differ.
+- `unregistered` when both machine-level files are absent;
+- `registered` when the helper is authorized and version-matched; or
+- `needs-repair` when installation is partial, unauthorized, ignored, or stale.
 
-`unregister` requires ordinary administrator authorization and removes the
-helper and sudoers rule. Re-running `register` replaces a stale helper with the
-current executable.
+An upgrade may intentionally produce a version mismatch. Re-running `register`
+replaces the helper after visible authorization. `unregister` removes the helper
+and sudoers rule using ordinary administrator authorization.
 
 ## Future app-bundle boundary
 
-A signed, notarized app-bundle distribution can use a launchd/XPC privileged
-helper registered through the current macOS Service Management APIs and enforce
-code-signature requirements at the connection boundary. The source-built
-Homebrew CLI does not have a stable Developer ID identity and therefore uses the
-more explicit per-user sudoers boundary described above. The two designs should
-not be represented as equivalent.
+A signed and notarized app bundle could use a launchd/XPC privileged helper and
+validate code signatures at the connection boundary. A source-built Homebrew
+CLI has no stable Developer ID identity and therefore uses the explicit per-user
+sudoers boundary described here. The two models are not equivalent.

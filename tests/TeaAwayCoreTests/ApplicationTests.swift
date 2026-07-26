@@ -9,7 +9,7 @@ final class ApplicationTests: XCTestCase {
     defer { removeTemporaryStore(fixture.directory) }
 
     XCTAssertEqual(fixture.application.run(arguments: ["version"]), 0)
-    XCTAssertEqual(fixture.output, ["teaway 0.3.0-dev"])
+    XCTAssertEqual(fixture.output, ["teaway 0.3.0"])
     XCTAssertTrue(fixture.errors.isEmpty)
   }
 
@@ -27,7 +27,7 @@ final class ApplicationTests: XCTestCase {
     XCTAssertEqual(fixture.application.run(arguments: ["auth", "register"]), 0)
     XCTAssertEqual(fixture.privilegeRegistration.registerCalls, 1)
     XCTAssertTrue(fixture.output.contains("authorization: registered"))
-    XCTAssertTrue(fixture.output.contains("helper version: 0.3.0-dev"))
+    XCTAssertTrue(fixture.output.contains("helper version: 0.3.0"))
     XCTAssertTrue(
       fixture.output.contains("scope: disablesleep and teaway-owned shutdown operations only")
     )

@@ -1,158 +1,174 @@
 # teaway
 
 [![CI](https://github.com/soundadam/teaway/actions/workflows/ci.yml/badge.svg)](https://github.com/soundadam/teaway/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/soundadam/teaway)](https://github.com/soundadam/teaway/releases/latest)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black)](https://github.com/soundadam/teaway#requirements)
+[![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-f05138)](https://www.swift.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-`teaway` is the stable `soundadam` macOS power-control CLI. Its primary job is
-to keep a Mac running after the lid is closed, then restore the setting it
-changed when the user turns it off. A separate command family can schedule,
-inspect, or cancel one explicit delayed shutdown.
+> **Run a Mac like an always-on server.**
 
-`teaway` does not manage development tools, terminals, remote access, or work
-processes. It changes only the power behavior the user requested.
+`teaway` is a focused macOS command-line tool for headless and long-running Mac
+setups. It keeps a Mac working when normal sleep would interrupt it—including a
+MacBook with the lid closed—then restores the exact power setting it owned. It
+can also schedule and precisely cancel one delayed shutdown.
 
-## Naming contract
+Use it for a spare MacBook build box, a Mac mini home server, a homelab node,
+long backups or media jobs, and self-hosted services that must survive the end
+of an interactive session. `teaway` manages the power lifecycle only; SSH,
+Screen Sharing, networking, service supervision, and the workload itself remain
+under your control.
 
-The publisher brand is always written `soundadam`. The stable product identity,
-repository, Formula token, and executable name are all `teaway`. A personal
-terminal may use `tea -> teaway`, but that shortcut is never installed publicly.
+## Why teaway
 
-Homebrew Core already owns the `tea` token for the Gitea CLI. The public
-repository name, Formula token, and installed executable are therefore
-`teaway`, with no hyphen. The Formula installs only `teaway` and must never
-install a conflicting `tea` executable or alias.
+- **Closed-lid and headless operation.** Manages the macOS `disablesleep` state
+  instead of merely keeping one foreground process active.
+- **Reversible ownership.** Records the value observed before `on` and restores
+  only the state that `teaway` owns.
+- **Safe repeated use.** An optional per-user helper removes repeated password
+  prompts without granting a shell or arbitrary `pmset` access.
+- **Explicit shutdowns.** Resolves a duration to an absolute local deadline,
+  requires an exact confirmation phrase, verifies the system event, and cancels
+  only the matching `teaway` event.
+- **No background control plane.** No daemon, listener, account, telemetry,
+  remote API, workload inspection, or cloud dependency.
 
-After migration, a user may keep `tea -> teaway` as a local shell alias or
-personal shim. That alias is local configuration, not part of the public
-package. During migration, do not repoint the existing personal `tea` command
-until its legacy power state has been restored. After verification, remove the
-legacy script, binary, state directory, and compatibility entrypoints.
-
-The retired `tea-away` name is not a public name, Formula token, executable, or
-upgrade path for `teaway`. No legacy binary is retained in the active checkout,
-release archive, or Homebrew package.
-
-## Current command surface
+## Quick start
 
 ```sh
-teaway                         # same as status
+brew install soundadam/tap/teaway
+
+# One visible administrator authorization, then narrow passwordless operations.
+teaway auth register
+
+# Keep the Mac available for remote work.
 teaway on
-teaway off
 teaway status
 
+# Optional: shut down after a bounded delay.
 teaway shutdown after 2h
 teaway shutdown status
 teaway shutdown cancel
 
-teaway auth status
-teaway auth register
-teaway auth unregister
-
-teaway version
+# Restore the exact pre-teaway sleep setting.
+teaway off
 ```
 
-`on` owns a reversible awake-state change. It records the setting it observed
-before enabling lid-closed operation. `off` restores only a setting owned by
-that native record; with no native-owned record it is a no-op and must not clear
-an externally managed `SleepDisabled=1` value.
+Before closing a laptop lid, verify that the Mac is on AC power, stationary,
+well ventilated, and reachable through the remote-access method you configured.
+`teaway` deliberately does not configure Remote Login, Screen Sharing, VPNs,
+firewalls, DNS, or service startup.
 
-Shutdown is independent of `on` and `off`. `shutdown after` resolves a duration
-such as `30m` or `2h` to an absolute local deadline and requires explicit human
-confirmation before visible macOS authorization. `shutdown cancel` may cancel
-only the single matching `teaway`-owned event. `off` never silently cancels a
-scheduled shutdown.
+## Commands
 
-By default, privileged changes use ordinary system `sudo`. `teaway` validates
-authorization with `sudo -v` but does not invalidate an existing sudo timestamp,
-store a password, or pipe a password through the process. A Mac whose local PAM
-configuration enables Touch ID for `sudo` may satisfy that authorization with
-Touch ID.
+| Command | Effect |
+| --- | --- |
+| `teaway` / `teaway status` | Read power source, observed sleep state, ownership, and shutdown state |
+| `teaway on` | Snapshot the current state, disable sleep, verify, and record ownership |
+| `teaway off` | Restore only the exact state owned by `teaway` |
+| `teaway shutdown after 30m` | Plan one shutdown after an explicit duration and require typed confirmation |
+| `teaway shutdown status` | Reconcile the private record with macOS scheduled power events |
+| `teaway shutdown cancel` | Cancel only the exact `teaway`-owned shutdown |
+| `teaway auth status` | Inspect ordinary/registered authorization and sudo Touch ID configuration |
+| `teaway auth register` | Install the narrow per-user root helper after visible authorization |
+| `teaway auth unregister` | Remove the helper and its sudoers rule |
+| `teaway version` | Print the installed version |
 
-`teaway auth status` also reports whether the local sudo PAM configuration has
-an active Touch ID rule. It is diagnostic only: `teaway` does not rewrite PAM
-configuration or silently broaden system-wide authentication policy.
+Durations accept `m`, `h`, and `d` units. Delayed shutdowns are bounded between
+10 minutes and 7 days.
 
-`teaway auth register` is an explicit opt-in for repeated local use. It requests
-administrator authorization once, installs a per-user root-owned copy of the
-current executable under `/Library/PrivilegedHelperTools`, and installs a
-matching `/etc/sudoers.d` rule. The rule permits only the hidden helper protocol
-for `disablesleep` and exact `teaway` shutdown operations; it does not grant
-passwordless execution of arbitrary `pmset`, shells, or the public CLI. Use
-`teaway auth status` to inspect the installation and `teaway auth unregister`
-to remove it.
+## Operating model
 
-The registered authorization is a machine-level trust decision: any process
-running as that macOS user can invoke the narrow helper operations. Do not
-register it on a shared or untrusted account. See
-[`docs/authorization.md`](docs/authorization.md) for the complete boundary.
+### Awake state
 
-Reminders, open-lid display-off timing, Low Power Mode integration, and the old
-AC server profile are compatibility candidates for later releases. They are not
-part of the current public command surface.
+`teaway on` performs a small transaction:
 
-## Migration from the personal script
+1. Require AC power and inspect the current macOS sleep setting.
+2. Persist the exact pre-change value in private state.
+3. Apply `disablesleep=1` through a fixed privileged operation.
+4. Re-read macOS state and report success only after verification.
 
-If migrating from a personal shell implementation, an observed
-`SleepDisabled=1` remains legacy or externally owned; `teaway` must not adopt
-it without an owned awake snapshot. Restore the legacy state explicitly with
-that script's full path before using the native implementation:
+`teaway off` reverses that transaction. With no owned record it is a no-op,
+even when the live value is already `1`; another tool or administrator may own
+that setting. This prevents `teaway` from silently undoing external policy.
 
-```sh
-/path/to/legacy/tea status
-/path/to/legacy/tea off
-```
+### Authorization
 
-Do not use the shorthand `tea` for this handoff: it may later become the local
-alias for `teaway`. Native `off` must not adopt or reset legacy state
-automatically, and `teaway` does not import or delete shell state. Verify the
-restored baseline before repointing a local alias. Retain the original script
-only until migration is verified, then remove it with every retired binary,
-state directory, and compatibility entrypoint.
+Without registration, mutations use ordinary `sudo` and preserve the system
+credential timestamp. With `teaway auth register`, the current executable is
+copied to a root-owned per-user helper and a validated sudoers rule permits only:
 
-No retired `tea`, `tea-away`, or pre-`teaway` artifact belongs in the active
-workspace, release archive, tap, or user command path.
+- `disablesleep` values `0` and `1`;
+- one canonical `teaway` shutdown schedule; and
+- exact cancellation of a matching canonical or recorded legacy event.
 
-## Build and validation
+The rule does not permit arbitrary CLI commands, arbitrary `pmset` arguments,
+or a shell. Registration is an account-level trust decision and is intended for
+a trusted single-user macOS account. Re-run `teaway auth register` after an
+upgrade when `auth status` reports a helper version mismatch.
 
-The current native release is version 0.2.3 under the canonical name:
+### Shutdown ownership
 
-```sh
-swift test
-swift build -c release --product teaway
-./scripts/package-development.zsh 0.2.3
-```
+Shutdown scheduling is independent of `on` and `off`. `teaway off` never
+silently cancels a shutdown. The system schedule is authoritative, while the
+private journal supplies the exact owner and tuple needed for safe recovery.
+macOS 26 two-digit/four-digit schedule rendering is normalized before exact
+comparison.
 
-The development archive may be signed with the selected Apple Development
-identity and hardened runtime for local validation only. Apple Development is
-not Developer ID, does not make the archive suitable for public distribution,
-and does not replace notarization.
+## Requirements
 
-The development archive is local validation evidence, not the Homebrew source
-asset. Homebrew builds from the immutable GitHub source tag.
+- macOS 13 Ventura or later
+- Apple silicon or Intel Mac supported by the installed macOS release
+- AC power for `teaway on`
+- Administrator authorization for power mutations or helper registration
+- Swift 5.9 / Xcode 15 or later when building from source
 
-## Homebrew direction
+## Safety and availability limits
 
-The source Formula target is
-[`packaging/Formula/teaway.rb.in`](packaging/Formula/teaway.rb.in). It builds
-the native `teaway` executable from source and its test invokes only read-only
-`version` and `status` commands. The earlier hyphenated Formula template belongs
-to the historical 0.2.1 candidate and must not be published under either name.
+A MacBook has less cooling headroom with its lid closed. Keep the machine on a
+hard, open surface; never run it closed inside a bag, drawer, or other confined
+space. `teaway` does not override thermal protection and cannot prevent power
+loss, kernel failure, forced updates, hardware faults, or a network outage.
 
-Install the source release from the personal tap:
+Treat a laptop or desktop Mac as a small server only after configuring the rest
+of the availability stack: remote access, service startup, backups, monitoring,
+stable networking, and—where needed—a UPS. See
+[Running a Mac as an always-on server](docs/operations.md).
+
+## Install and upgrade
 
 ```sh
 brew install soundadam/tap/teaway
+brew update
+brew upgrade teaway
 ```
 
-To render the Formula for a tagged release:
+The Homebrew Formula builds from the immutable GitHub source tag. Public
+releases do not ship an unnotarized prebuilt executable.
+
+To build directly:
 
 ```sh
-./scripts/render-formula.zsh OWNER/REPO 0.2.3 SHA256 SPDX-LICENSE
+git clone https://github.com/soundadam/teaway.git
+cd teaway
+swift test
+swift build -c release --product teaway
+.build/release/teaway version
 ```
 
-The project is distributed under the [MIT License](LICENSE). Real-hardware
-lid-close and shutdown acceptance remains an explicit operator test; package
-installation never changes power state.
+Homebrew installs only `teaway`. The shorter `tea` name belongs to another
+Homebrew package and may be used only as a personal shell alias or shim.
 
-See [`docs/product-design.md`](docs/product-design.md),
-[`docs/security.md`](docs/security.md), and
-[`docs/release-readiness.md`](docs/release-readiness.md).
+## Documentation
+
+- [Operating a Mac as an always-on server](docs/operations.md)
+- [Authorization model](docs/authorization.md)
+- [Security model](docs/security.md)
+- [Product design and boundaries](docs/product-design.md)
+- [Migration from an older personal script](docs/migration.md)
+- [Release readiness](docs/release-readiness.md)
+- [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security reporting](SECURITY.md)
+
+`teaway` is distributed under the [MIT License](LICENSE).
