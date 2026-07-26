@@ -18,14 +18,18 @@ that benefits from the Mac staying awake remains entirely outside `teaway`.
 
 ## Naming contract
 
+The publisher brand is `soundadam`; the stable product identity is `teaway`.
+Public package metadata must preserve both spellings exactly.
+
 The canonical public repository, Homebrew Formula token, and executable name
 are `teaway`. Homebrew installs only that executable because Core already owns
 `tea` for the Gitea CLI. `tea` is permitted only as a user-managed local alias
 or personal shim pointing to `teaway`; it is never created by the Formula.
 
-The hyphenated `tea-away` token identifies the historical 0.2.1 development
-candidate. It is not a second public name, compatibility executable, or release
-alias. The next candidate using the final naming contract is 0.2.2.
+The retired `tea-away` token is not a second public name, compatibility
+executable, or release alias. No legacy binary is retained in the active
+workspace or package. The current release using the final naming contract is
+0.2.3.
 
 ## Primary journey
 
@@ -65,7 +69,7 @@ Automatic shutdown is expressed only through the separate `shutdown after`
 command. `off` does not cancel shutdown, and shutdown does not infer that other
 work is complete.
 
-## 0.2.2 scope
+## 0.2.3 scope
 
 - Native `on`, `off`, and consolidated read-only `status` under `teaway`.
 - Exact pre-change awake snapshot and fail-closed ownership checks.
@@ -113,12 +117,12 @@ Before cutover, the user runs the original personal command by its full path:
 Only after the legacy state is restored and verified should `teaway on`
 establish its own snapshot. Native `teaway` does not import, rewrite, or delete
 shell snapshot files. Do not repoint the local `tea` alias during this handoff;
-after cutover it may point to `teaway`. Retain the legacy script as an explicit
-rollback command until migration is complete.
+after cutover it may point to `teaway`. Once migration is verified, remove the
+legacy script, binary, state directory, and compatibility entrypoints.
 
-The signed 0.2.0 archive is rejected session-prototype evidence. The signed
-0.2.1 `tea-away` candidate corrected the feature direction but uses the retired
-name. Neither is publishable. The canonical `teaway` product resumes at 0.2.2.
+Retired `tea` and `tea-away` artifacts are not publishable and are not retained
+in the active workspace. The canonical `teaway` product began its stable source
+release line at 0.2.2 and continues as the product identity in 0.2.3.
 
 ## Explicit non-goals
 

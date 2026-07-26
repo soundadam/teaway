@@ -1,14 +1,18 @@
 # teaway
 
-`teaway` is a small macOS power-control CLI. Its primary job is to keep a Mac
-running after the lid is closed, then restore the setting it changed when the
-user turns it off. A separate command family can schedule, inspect, or cancel
-one explicit delayed shutdown.
+`teaway` is the stable `soundadam` macOS power-control CLI. Its primary job is
+to keep a Mac running after the lid is closed, then restore the setting it
+changed when the user turns it off. A separate command family can schedule,
+inspect, or cancel one explicit delayed shutdown.
 
 `teaway` does not manage development tools, terminals, remote access, or work
 processes. It changes only the power behavior the user requested.
 
 ## Naming contract
+
+The publisher brand is always written `soundadam`. The stable product identity,
+repository, Formula token, and executable name are all `teaway`. A personal
+terminal may use `tea -> teaway`, but that shortcut is never installed publicly.
 
 Homebrew Core already owns the `tea` token for the Gitea CLI. The public
 repository name, Formula token, and installed executable are therefore
@@ -18,13 +22,14 @@ install a conflicting `tea` executable or alias.
 After migration, a user may keep `tea -> teaway` as a local shell alias or
 personal shim. That alias is local configuration, not part of the public
 package. During migration, do not repoint the existing personal `tea` command
-until its legacy power state has been restored.
+until its legacy power state has been restored. After verification, remove the
+legacy script, binary, state directory, and compatibility entrypoints.
 
-The `tea-away` name belongs only to the signed 0.2.1 development candidate. It
-is historical evidence, not the public name, Formula token, executable, or an
-upgrade path for `teaway`.
+The retired `tea-away` name is not a public name, Formula token, executable, or
+upgrade path for `teaway`. No legacy binary is retained in the active checkout,
+release archive, or Homebrew package.
 
-## 0.2.2 target command surface
+## 0.2.3 command surface
 
 ```sh
 teaway                         # same as status
@@ -52,7 +57,7 @@ scheduled shutdown.
 
 Reminders, open-lid display-off timing, Low Power Mode integration, and the old
 AC server profile are compatibility candidates for later releases. They are not
-part of the 0.2.2 public command surface.
+part of the 0.2.3 public command surface.
 
 ## Migration from the personal script
 
@@ -70,22 +75,20 @@ Do not use the shorthand `tea` for this handoff: it may later become the local
 alias for `teaway`. Native `off` must not adopt or reset legacy state
 automatically, and `teaway` does not import or delete shell state. Verify the
 restored baseline before repointing a local alias. Retain the original script
-as an explicit rollback path until migration is complete.
+only until migration is verified, then remove it with every retired binary,
+state directory, and compatibility entrypoint.
 
-The signed `tea-away-0.2.0-macos-arm64-development.zip` is retained only as
-historical evidence of the rejected session-prototype direction. The signed
-0.2.1 `tea-away` development candidate corrected the product direction but
-predates the final naming contract. Neither artifact may be published, placed
-in a tap, or represented as a `teaway` release.
+No retired `tea`, `tea-away`, or pre-`teaway` artifact belongs in the active
+workspace, release archive, tap, or user command path.
 
 ## Build and validation
 
-The next native target is version 0.2.2 under the canonical name:
+The current native release is version 0.2.3 under the canonical name:
 
 ```sh
 swift test
 swift build -c release --product teaway
-./scripts/package-development.zsh 0.2.2
+./scripts/package-development.zsh 0.2.3
 ```
 
 The development archive may be signed with the selected Apple Development
@@ -113,7 +116,7 @@ brew install soundadam/tap/teaway
 To render the Formula for a tagged release:
 
 ```sh
-./scripts/render-formula.zsh OWNER/REPO 0.2.2 SHA256 SPDX-LICENSE
+./scripts/render-formula.zsh OWNER/REPO 0.2.3 SHA256 SPDX-LICENSE
 ```
 
 The project is distributed under the [MIT License](LICENSE). Real-hardware

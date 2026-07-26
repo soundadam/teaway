@@ -9,7 +9,7 @@ final class ApplicationTests: XCTestCase {
     defer { removeTemporaryStore(fixture.directory) }
 
     XCTAssertEqual(fixture.application.run(arguments: ["version"]), 0)
-    XCTAssertEqual(fixture.output, ["teaway 0.2.2"])
+    XCTAssertEqual(fixture.output, ["teaway 0.2.3"])
     XCTAssertTrue(fixture.errors.isEmpty)
   }
 

@@ -157,7 +157,10 @@ public final class StateStore: @unchecked Sendable {
     if let legacyDirectory = paths.legacyStateDirectory,
       legacyDirectory.standardizedFileURL != paths.stateDirectory.standardizedFileURL
     {
-      candidates.append(legacyDirectory.appendingPathComponent("state.json"))
+      let legacyStateFile = legacyDirectory.appendingPathComponent("state.json")
+      if fileManager.fileExists(atPath: legacyStateFile.path) {
+        candidates.append(legacyStateFile)
+      }
     }
     return candidates
   }

@@ -9,15 +9,12 @@
   user-managed local alias.
 - Version 0.2.2 is the first MIT-licensed source release. Its public commands are `on`,
   `off`, `status`, `shutdown after`, `shutdown status`, and `shutdown cancel`.
-- The signed 0.2.0 archive is rejected session-prototype evidence. The signed
-  0.2.1 `tea-away` archive is a corrected but historical naming candidate.
-  Neither is a release candidate, may be renamed as 0.2.2, published, or
-  referenced by the `teaway` Formula.
-- The legacy zsh executable and its existing archives are not public assets.
+- Retired `tea` and `tea-away` binaries, archives, state directories, and
+  compatibility entrypoints are absent from the active workspace and package.
 - The development packaging workflow performs no release, tag, tap mutation,
   credential export, or actual power operation.
 
-## Required 0.2.2 evidence
+## Required 0.2.3 evidence
 
 ### Native behavior
 
@@ -35,8 +32,10 @@
 - `shutdown cancel` cancels only the exact `teaway`-owned event and fails closed
   on conflicts or unverifiable state.
 - `off` and shutdown remain independent operations.
+- A default `status` operation creates only the canonical `teaway` state
+  directory; it does not create an absent retired `tea-away` directory.
 - Reminder, display-off, Low Power Mode, and server-profile commands are absent
-  from the 0.2.2 public interface.
+  from the 0.2.3 public interface.
 
 ### Naming and local alias
 
@@ -45,8 +44,7 @@
 - No release or Formula installs `tea` or `tea-away`.
 - If the owner wants the short command after cutover, `tea -> teaway` is created
   only in personal local configuration and is tested separately from Homebrew.
-- The 0.2.1 `tea-away` artifact remains visibly historical and cannot satisfy
-  any 0.2.2 release check.
+- No retired `tea` or `tea-away` artifact can satisfy any 0.2.3 release check.
 
 ### Migration and real hardware
 
@@ -55,8 +53,9 @@
 - Before native cutover, the owner runs the legacy script's `off` command by
   its full path and verifies the baseline with `teaway status`.
 - The local `tea` alias is not repointed until that restoration is complete.
-  The legacy script remains the explicit rollback path until migration passes.
-- Native code never imports or deletes legacy snapshot files; the 0.2.2
+  After migration passes, the legacy script, binaries, state directory, and
+  compatibility entrypoints are removed.
+- Native code never imports or deletes legacy snapshot files; the 0.2.3
   migration test follows the documented manual handoff.
 - A disposable supported Mac verifies lid-closed workload continuity, exact
   `off` restoration, AC and battery reporting, reboot behavior, delayed
@@ -67,11 +66,11 @@
 ### Build and packaging
 
 - `TeaAwayVersion.current`, documentation examples, archive name, manifest,
-  Formula tag, and Homebrew-reported version all equal 0.2.2.
+  Formula tag, and Homebrew-reported version all equal 0.2.3.
 - SwiftPM and the source Formula retain the same macOS and Swift/Xcode minimums.
 - The local development archive contains only the corrected `teaway` executable
   and manifest, is signed with the selected Apple Development identity and
-  hardened runtime, round-trips successfully, reports 0.2.2, and has a verified
+  hardened runtime, round-trips successfully, reports 0.2.3, and has a verified
   checksum.
 - The archive manifest states `local-development-only`, `notarized=false`, and
   `homebrew_public_asset=false`.
@@ -88,13 +87,13 @@
 
 ## Release order
 
-1. Test the source tree and create one annotated immutable 0.2.2 tag.
+1. Test the source tree and create one annotated immutable 0.2.3 tag.
 2. Download the exact tag archive and calculate its SHA-256.
 3. Render, audit, and install-test the fully qualified `teaway` Formula.
 4. Run the legacy restoration and real-hardware migration acceptance separately.
 5. Only after migration succeeds, optionally create a local `tea -> teaway`
    alias outside Homebrew.
 
-Never use the Apple Development archive as a public source asset. Never publish
-or relabel the rejected 0.2.0 archive, the historical 0.2.1 `tea-away` archive,
-or an existing legacy `tea-0.1.0` archive as a `teaway` release.
+Never use the Apple Development archive as a public source asset. Never publish,
+relabel, or copy forward any retired `tea` or `tea-away` artifact as a `teaway`
+release.

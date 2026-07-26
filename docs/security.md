@@ -22,9 +22,9 @@ Core owns `tea` for the Gitea CLI, `tea -> teaway` may exist only as a
 user-managed local alias or personal shim outside the package.
 
 During migration, the existing personal `tea` path must not be repointed until
-its power state is restored. The 0.2.1 `tea-away` binary is a historical local
-candidate and must not be presented as `teaway` or used as a public release
-asset.
+its power state is restored. After verification, retired scripts, binaries,
+state directories, and compatibility entrypoints are removed and must not be
+presented as `teaway` or used as public release assets.
 
 ## Awake ownership
 
@@ -58,8 +58,8 @@ original personal command by its full path:
 
 Native `teaway` never sources, imports, rewrites, or deletes legacy snapshot
 files. The operator verifies the restored baseline before repointing any local
-`tea` alias. The original script remains the explicit rollback path until
-migration is complete.
+`tea` alias. The original script remains available only until migration is
+verified, then it and all retired state and entrypoints are removed.
 
 ## Shutdown boundary
 
@@ -99,7 +99,7 @@ CPU, network loss, or any inferred completion signal.
 ## Deferred compatibility boundaries
 
 Reminder sound, open-lid display-off timing, Low Power Mode, and the AC server
-profile are outside 0.2.2. If later restored, each must be opt-in, validate all
+profile are outside 0.2.3. If later restored, each must be opt-in, validate all
 input, snapshot only allowlisted values, restore exactly what `teaway` changed,
 and roll back partial failure. The server profile must verify AC power before
 any state or system mutation.
@@ -108,12 +108,13 @@ any state or system mutation.
 
 The personal zsh implementation, its marker-based reminder processes, and its
 system-wide legacy shutdown cancellation are not part of this public native
-repository or the 0.2.2 security model. Existing legacy archives must not
+repository or the 0.2.3 security model. Legacy scripts, binaries, state
+directories, and archives are removed after verified migration and must not
 become public assets.
 
 ## Signing boundary
 
-The 0.2.2 `teaway` local development archive may be signed with Apple
+The 0.2.3 `teaway` local development archive may be signed with Apple
 Development and hardened runtime. This validates local provenance only. Apple
 Development is not Developer ID and does not make an archive publishable.
 
@@ -122,7 +123,6 @@ timestamping, notarization, stapling where applicable, and verification of the
 final immutable asset. A source-built Formula does not inherit the developer's
 local signing identity and does not require Apple Development signing.
 
-The signed 0.2.0 archive records a rejected session prototype. The signed 0.2.1
-`tea-away` archive records a corrected but retired naming candidate. Neither
-may be used as a public release, renamed to impersonate 0.2.2, or referenced as
-a Homebrew source asset.
+No retired `tea` or `tea-away` archive may be used as a public release, renamed
+to impersonate 0.2.3, retained in the active workspace, or referenced as a
+Homebrew source asset.

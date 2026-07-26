@@ -55,6 +55,22 @@ final class StateStoreTests: XCTestCase {
     XCTAssertEqual(paths.legacyStateDirectory?.path, "/tmp/xdg-state/tea-away")
   }
 
+  func testExclusiveLockDoesNotCreateAbsentLegacyDirectory() throws {
+    let root = FileManager.default.temporaryDirectory
+      .appendingPathComponent("teaway-lock-path-tests-\(UUID().uuidString)", isDirectory: true)
+    defer { removeTemporaryStore(root) }
+    let primary = root.appendingPathComponent("teaway", isDirectory: true)
+    let legacy = root.appendingPathComponent("tea-away", isDirectory: true)
+    let store = StateStore(
+      paths: TeaAwayPaths(stateDirectory: primary, legacyStateDirectory: legacy)
+    )
+
+    try store.withExclusiveLock {}
+
+    XCTAssertTrue(FileManager.default.fileExists(atPath: primary.path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: legacy.path))
+  }
+
   func testRoundTripsStateAndUsesPrivatePermissions() throws {
     let (store, directory) = try makeTemporaryStore()
     defer { removeTemporaryStore(directory) }
