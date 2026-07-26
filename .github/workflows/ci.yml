@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "iteration/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swift-package:
+    name: Swift package
+    runs-on: macos-15
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Report toolchain
+        run: |
+          set -euo pipefail
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Check changed-file whitespace
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          zero_sha=0000000000000000000000000000000000000000
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            git diff --check "$BASE_SHA...$HEAD_SHA"
+          elif [[ "$EVENT_NAME" == "push" && -n "$BASE_SHA" && "$BASE_SHA" != "$zero_sha" ]]; then
+            git diff --check "$BASE_SHA...$HEAD_SHA"
+          else
+            git diff-tree --check --no-commit-id --root -r "$HEAD_SHA"
+          fi
+
+      - name: Check repository security invariants
+        run: |
+          set -euo pipefail
+
+          secret_pattern='-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}'
+          if git grep -nE -e "$secret_pattern" -- .; then
+            echo "Potential credential material found in tracked files." >&2
+            exit 1
+          fi
+
+          if git grep -nF 'sudo -k' -- Sources; then
+            echo "Production sources must not invalidate the sudo credential cache." >&2
+            exit 1
+          fi
+
+      - name: Validate package manifest
+        run: swift package dump-package >/dev/null
+
+      - name: Run tests
+        run: swift test
+
+      - name: Build release executable
+        run: swift build -c release --product teaway
+
+      - name: Smoke-test release executable
+        run: |
+          set -euo pipefail
+          source_version=$(awk -F'"' '/public static let current = / {print $2}' Sources/TeaAwayCore/Models.swift)
+          actual_version=$(.build/release/teaway version)
+          test "$actual_version" = "teaway $source_version"
+
+          set +e
+          helper_error=$(.build/release/teaway __teaway_privileged version 2>&1)
+          helper_status=$?
+          set -e
+          test "$helper_status" -eq 77
+          grep -q 'privileged helper must run as root' <<<"$helper_error"

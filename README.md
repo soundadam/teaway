@@ -1,5 +1,7 @@
 # teaway
 
+[![CI](https://github.com/soundadam/teaway/actions/workflows/ci.yml/badge.svg)](https://github.com/soundadam/teaway/actions/workflows/ci.yml)
+
 `teaway` is the stable `soundadam` macOS power-control CLI. Its primary job is
 to keep a Mac running after the lid is closed, then restore the setting it
 changed when the user turns it off. A separate command family can schedule,
