@@ -4,6 +4,7 @@ public final class TeaAwayApplication {
   private let powerService: PowerService
   private let shutdownService: ShutdownService
   private let shutdownChallenger: any ShutdownChallenging
+  private let privilegeRegistrationService: (any PrivilegeRegistering)?
   private let output: (String) -> Void
   private let errorOutput: (String) -> Void
   private let displayDateFormatter: DateFormatter
@@ -13,6 +14,7 @@ public final class TeaAwayApplication {
     powerService: PowerService,
     shutdownService: ShutdownService,
     shutdownChallenger: any ShutdownChallenging = SystemShutdownChallenger(),
+    privilegeRegistrationService: (any PrivilegeRegistering)? = nil,
     output: @escaping (String) -> Void = { print($0) },
     errorOutput: @escaping (String) -> Void = { message in
       FileHandle.standardError.write(Data("\(message)\n".utf8))
@@ -23,6 +25,7 @@ public final class TeaAwayApplication {
     self.powerService = powerService
     self.shutdownService = shutdownService
     self.shutdownChallenger = shutdownChallenger
+    self.privilegeRegistrationService = privilegeRegistrationService
     self.output = output
     self.errorOutput = errorOutput
     self.hostName = hostName
@@ -41,9 +44,21 @@ public final class TeaAwayApplication {
   ) {
     let executor = SystemProcessExecutor()
     let store = StateStore(paths: .resolve(environment: environment))
+    let privilegedExecutor = SystemPrivilegedCommandExecutor(executor: executor)
     self.init(
-      powerService: PowerService(store: store, executor: executor),
-      shutdownService: ShutdownService(store: store, executor: executor),
+      powerService: PowerService(
+        store: store,
+        executor: executor,
+        privilegedExecutor: privilegedExecutor
+      ),
+      shutdownService: ShutdownService(
+        store: store,
+        executor: executor,
+        privilegedExecutor: privilegedExecutor
+      ),
+      privilegeRegistrationService: SystemPrivilegeRegistrationService(
+        executor: executor
+      ),
       output: output,
       errorOutput: errorOutput
     )
@@ -73,6 +88,9 @@ public final class TeaAwayApplication {
       teaway shutdown after DURATION
       teaway shutdown status
       teaway shutdown cancel [ACTION_ID]
+      teaway auth status
+      teaway auth register
+      teaway auth unregister
       teaway version
 
     'on' disables lid-close sleep and records the exact value needed by 'off'.
@@ -117,6 +135,8 @@ public final class TeaAwayApplication {
       return 0
     case "shutdown":
       return try runShutdown(Array(arguments.dropFirst()))
+    case "auth":
+      return try runAuthorization(Array(arguments.dropFirst()))
     case "version", "--version":
       guard arguments.count == 1 else { throw TeaAwayError.usage(Self.usage) }
       output("teaway \(TeaAwayVersion.current)")
@@ -128,6 +148,37 @@ public final class TeaAwayApplication {
     default:
       throw TeaAwayError.usage(Self.usage)
     }
+  }
+
+  private func runAuthorization(_ arguments: [String]) throws -> Int32 {
+    guard let service = privilegeRegistrationService else {
+      throw TeaAwayError.authorizationConfiguration(
+        "authorization management is unavailable in this build"
+      )
+    }
+    guard let command = arguments.first, arguments.count == 1 else {
+      throw TeaAwayError.usage(Self.usage)
+    }
+
+    switch command {
+    case "status":
+      outputAuthorizationStatus(try service.status())
+      outputSudoTouchIDStatus(service.sudoTouchIDStatus())
+    case "register":
+      let result = try service.register()
+      output("authorization: registered")
+      output("helper version: \(result.helperVersion)")
+      output("helper: \(result.helperPath)")
+      output("sudoers: \(result.sudoersPath)")
+      output("scope: disablesleep and teaway-owned shutdown operations only")
+      output("warning: processes running as this macOS user can invoke this narrow privilege")
+    case "unregister":
+      try service.unregister()
+      output("authorization: unregistered")
+    default:
+      throw TeaAwayError.usage(Self.usage)
+    }
+    return 0
   }
 
   private func runShutdown(_ arguments: [String]) throws -> Int32 {
@@ -207,6 +258,34 @@ public final class TeaAwayApplication {
     output("id: \(record.id)")
     output("owner: \(record.owner)")
     output("scheduled for: \(format(record.scheduledAt))")
+  }
+
+  private func outputAuthorizationStatus(_ status: PrivilegeRegistrationStatus) {
+    switch status {
+    case .unregistered:
+      output("authorization: unregistered")
+      output("mode: ordinary sudo with the system credential cache")
+    case .registered(let helperVersion):
+      output("authorization: registered")
+      output("helper version: \(helperVersion)")
+      output("mode: passwordless narrow helper")
+    case .needsRepair(let detail):
+      output("authorization: needs-repair")
+      output("detail: \(detail)")
+    }
+  }
+
+  private func outputSudoTouchIDStatus(_ status: SudoTouchIDStatus) {
+    switch status {
+    case .enabled:
+      output("touch id for sudo: configured")
+    case .disabled:
+      output("touch id for sudo: not configured")
+      output("touch id note: macOS PAM controls this; teaway does not modify PAM")
+    case .unknown(let detail):
+      output("touch id for sudo: unknown")
+      output("touch id detail: \(detail)")
+    }
   }
 
   private func format(_ date: Date) -> String {

@@ -41,17 +41,21 @@ public struct PowerOffResult: Equatable, Sendable {
 public final class PowerService: @unchecked Sendable {
   private let store: StateStore
   private let executor: any ProcessExecuting
+  private let privilegedExecutor: any PrivilegedCommandExecuting
   private let clock: any TeaAwayClock
   private let saveState: @Sendable (TeaAwayState) throws -> Void
 
   public init(
     store: StateStore,
     executor: any ProcessExecuting,
+    privilegedExecutor: (any PrivilegedCommandExecuting)? = nil,
     clock: any TeaAwayClock = SystemClock(),
     stateSaver: (@Sendable (TeaAwayState) throws -> Void)? = nil
   ) {
     self.store = store
     self.executor = executor
+    self.privilegedExecutor =
+      privilegedExecutor ?? SystemPrivilegedCommandExecutor(executor: executor)
     self.clock = clock
     self.saveState = stateSaver ?? { state in try store.save(state) }
   }
@@ -362,23 +366,13 @@ public final class PowerService: @unchecked Sendable {
     _ value: Int,
     requireACPowerBeforeMutation: Bool
   ) throws {
-    _ = try executor.checkedInteractiveRun(
-      ExternalCommand(SystemCommand.sudo, ["-k"])
-    )
-    _ = try executor.checkedInteractiveRun(
-      ExternalCommand(SystemCommand.sudo, ["-v"])
-    )
+    try privilegedExecutor.authorize()
     if requireACPowerBeforeMutation {
       guard try isOnACPower() else {
         throw TeaAwayError.requiresACPower
       }
     }
-    _ = try executor.checkedInteractiveRun(
-      ExternalCommand(
-        SystemCommand.sudo,
-        [SystemCommand.pmset, "-a", "disablesleep", String(value)]
-      )
-    )
+    try privilegedExecutor.runAuthorized(.setDisableSleep(value))
   }
 
   private func validate(_ record: PowerRecord) throws {

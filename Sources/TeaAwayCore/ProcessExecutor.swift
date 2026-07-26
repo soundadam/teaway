@@ -66,8 +66,12 @@ public final class SystemProcessExecutor: ProcessExecuting, @unchecked Sendable 
 }
 
 public enum SystemCommand {
+  public static let cmp = "/usr/bin/cmp"
+  public static let install = "/usr/bin/install"
   public static let pmset = "/usr/bin/pmset"
+  public static let rm = "/bin/rm"
   public static let sudo = "/usr/bin/sudo"
+  public static let visudo = "/usr/sbin/visudo"
 }
 
 extension ProcessExecuting {

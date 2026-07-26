@@ -2,127 +2,108 @@
 
 ## Trust boundary
 
-`teaway` changes macOS power behavior only after an explicit command. It does
-not install a privileged helper, LaunchDaemon, sudoers rule, setuid executable,
-password cache, listener, or cloud control plane. Privileged operations use
-fixed macOS system paths and an ordinary visible authorization prompt.
+`teaway` changes macOS power behavior only after an explicit command. It has no
+network listener, cloud service, telemetry, workload inspection, password
+cache, setuid executable, or always-running daemon. It never reads, stores,
+logs, or pipes an administrator password. Privileged operations use fixed macOS
+system paths.
 
-`status` and `version` are read-only. They must not modify power settings,
-schedule an event, or cancel an event. A Homebrew test is restricted to those
-two commands.
+Read-only `status` and `version` commands must not modify power settings or
+scheduled events. Homebrew tests are restricted to read-only behavior.
 
-The Mac must remain stationary and well ventilated. Keeping a closed Mac awake
-inside a bag is outside the supported model.
+## Authorization boundary
 
-## Name and installation boundary
+### Ordinary sudo
 
-The public repository, Homebrew Formula token, and executable are all
-`teaway`. The Formula installs no `tea` or `tea-away` command. Because Homebrew
-Core owns `tea` for the Gitea CLI, `tea -> teaway` may exist only as a
-user-managed local alias or personal shim outside the package.
+Without registration, a mutation validates authorization with `sudo -v`,
+preserves any existing credential timestamp, rechecks mutable safety
+preconditions, and invokes one fixed `pmset` operation. The implementation does
+not use `sudo -k`. Authentication method selection—including Touch ID when PAM
+is configured for it—belongs to macOS. `teaway auth status` is diagnostic and
+never edits PAM.
 
-During migration, the existing personal `tea` path must not be repointed until
-its power state is restored. After verification, retired scripts, binaries,
-state directories, and compatibility entrypoints are removed and must not be
-presented as `teaway` or used as public release assets.
+### Registered helper
+
+`teaway auth register` installs, after visible authorization:
+
+- `/Library/PrivilegedHelperTools/com.soundadam.teaway.helper.<uid>`; and
+- `/etc/sudoers.d/soundadam-teaway-<uid>`.
+
+Both are root-owned. The sudoers rule delegates only helper version inspection,
+`disablesleep` values `0` and `1`, one canonical shutdown schedule, and exact
+cancellation of a canonical or recorded legacy event. It does not delegate the
+public CLI, a shell, arbitrary executables, or arbitrary `pmset` arguments.
+
+The helper validates operation name, arity, date, owner prefix, identifier
+character set, and identifier length before invoking `/usr/bin/pmset` without a
+shell. The CLI normalizes macOS schedule display dates, but the privileged
+protocol receives only canonical `MM/dd/yy HH:mm:ss` values.
+
+The rule trusts the entire macOS account. Any process running as that user can
+invoke the allowlisted operations, so registration is inappropriate for shared
+or untrusted accounts. A version mismatch fails closed until registration is
+refreshed.
 
 ## Awake ownership
 
-`on` is a reversible, owned state transition:
+`on` is an owned transaction:
 
-1. Inspect the current lid-close sleep setting.
+1. Inspect AC power and the current sleep setting.
 2. Persist the exact pre-change value in private native state.
-3. Request visible authorization and apply the awake setting.
-4. Re-read macOS state and report success only after verification.
+3. Authorize and apply `disablesleep=1`.
+4. Verify the live state before committing ownership.
 
-State is written atomically in a mode-0700 directory with mode-0600 files. A
-snapshot accepts only its documented schema and values. Partial failure keeps
-enough state for recovery and does not invent a successful ownership record.
+State uses an atomic mode-0700 directory and mode-0600 files. Partial failure
+retains a recovery phase rather than inventing success.
 
-`off` restores only a native `teaway`-owned snapshot. If no such snapshot
-exists, `off` is a no-op. It must not turn `SleepDisabled` off merely because
-the current value is `1`; that value may belong to the legacy script, another
-tool, or the user. If macOS already reports the saved baseline, `teaway` clears
-only its journal because the requested restoration is already complete. An
-unreadable or unsupported state fails closed rather than guessing or
-overwriting another owner.
-
-An existing `SleepDisabled=1` value without a native record remains legacy or
-external state. Native `off` must not clear it. Migration begins by running the
-original personal command by its full path:
-
-```sh
-/path/to/legacy/tea status
-/path/to/legacy/tea off
-```
-
-Native `teaway` never sources, imports, rewrites, or deletes legacy snapshot
-files. The operator verifies the restored baseline before repointing any local
-`tea` alias. The original script remains available only until migration is
-verified, then it and all retired state and entrypoints are removed.
+`off` restores only a matching native record. A live value of `1` without that
+record is external and remains unchanged. Corrupt, conflicting, or unsupported
+state fails closed.
 
 ## Shutdown boundary
 
-Shutdown is independent of awake ownership. It is requested only through:
+Shutdown uses a separate transaction. `shutdown after` accepts only bounded
+explicit durations, prints the absolute deadline, timezone, hostname, owner,
+and action ID, then requires the complete displayed phrase from a real TTY.
+Non-interactive confirmation fails closed.
 
-```text
-teaway shutdown after DURATION
-teaway shutdown status
-teaway shutdown cancel
-```
+Before and after mutation, `teaway` inspects `/usr/bin/pmset -g sched`. It rejects
+existing shutdowns or conflicting owners, persists the exact tuple before the
+system call, verifies the scheduled event, and attempts exact compensation if a
+later commit fails. macOS 26 four-digit year rendering is normalized before
+comparison with the canonical two-digit tuple.
 
-`shutdown after` parses a bounded duration, displays the resolved absolute
-deadline, timezone, hostname, action ID, and exact effect, then requires the
-full displayed phrase from a real TTY followed by visible authorization.
-Non-interactive use fails closed and discards the fresh uncommitted plan when
-that can be verified safely.
+`shutdown cancel` removes only the exact owned event. It never runs broad
+commands such as `pmset cancelall` and never cancels unrelated Apple wake events.
+`off` and shutdown remain independent.
 
-Internally, scheduling retains the existing defensive transaction:
+## Operational boundary
 
-1. Create a short-lived `teaway`-owned plan.
-2. Reject an existing shutdown or conflicting `teaway` event.
-3. Persist the committing tuple before invoking macOS.
-4. Schedule one `pmset` shutdown with a unique `teaway` owner.
-5. Re-read `pmset -g sched` and commit state only when the exact tuple exists.
-6. Attempt exact compensating cancellation if later persistence fails.
+Keeping a closed laptop awake reduces thermal margin. Supported operation
+requires AC power, a stationary Mac, and an open, well-ventilated surface. A
+bag, drawer, bedding, or other confined location is outside the supported model.
 
-The action identifier may remain internal because only one `teaway` shutdown is
-allowed. `shutdown status` reconciles private state with macOS, which remains
-authoritative. `shutdown cancel` cancels only the exact observed
-`teaway`-owned tuple. It never invokes `killall shutdown`, `pmset cancelall`, or
-cancellation of an unrelated owner. A mismatch is a recovery error, not
-permission to guess.
+`teaway` does not guarantee availability. Network loss, power failure, storage
+failure, crashes, forced updates, hardware faults, and service failure remain
+outside its control.
 
-`off` never cancels shutdown. Shutdown is not triggered by workload exit, idle
-CPU, network loss, or any inferred completion signal.
+## Installation and supply chain
 
-## Deferred compatibility boundaries
+The canonical repository, Formula token, SwiftPM product, and executable are
+`teaway`. Homebrew installs no `tea` or `tea-away` command.
 
-Reminder sound, open-lid display-off timing, Low Power Mode, and the AC server
-profile are outside 0.2.3. If later restored, each must be opt-in, validate all
-input, snapshot only allowlisted values, restore exactly what `teaway` changed,
-and roll back partial failure. The server profile must verify AC power before
-any state or system mutation.
+GitHub Actions runs on GitHub-hosted macOS runners with read-only token
+permissions. Checkout is pinned to an immutable action commit. CI checks common
+credential patterns, production `sudo -k`, package validity, tests, release
+builds, and helper fail-closed behavior.
 
-## Legacy boundary
+Public releases use immutable source tags. The Homebrew Formula builds from
+source and verifies the exact source archive SHA-256. Apple Development-signed
+local archives are not public distribution assets. Any future prebuilt binary
+requires Developer ID signing, timestamping, notarization, and verification of
+the final immutable asset.
 
-The personal zsh implementation, its marker-based reminder processes, and its
-system-wide legacy shutdown cancellation are not part of this public native
-repository or the 0.2.3 security model. Legacy scripts, binaries, state
-directories, and archives are removed after verified migration and must not
-become public assets.
+## Vulnerability reporting
 
-## Signing boundary
-
-The 0.2.3 `teaway` local development archive may be signed with Apple
-Development and hardened runtime. This validates local provenance only. Apple
-Development is not Developer ID and does not make an archive publishable.
-
-A public prebuilt artifact would require Developer ID Application, secure
-timestamping, notarization, stapling where applicable, and verification of the
-final immutable asset. A source-built Formula does not inherit the developer's
-local signing identity and does not require Apple Development signing.
-
-No retired `tea` or `tea-away` archive may be used as a public release, renamed
-to impersonate 0.2.3, retained in the active workspace, or referenced as a
-Homebrew source asset.
+Do not publish suspected security vulnerabilities in a public issue. Follow the
+private process in [`SECURITY.md`](../SECURITY.md).

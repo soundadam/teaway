@@ -134,7 +134,6 @@ final class PowerServiceTests: XCTestCase {
     XCTAssertEqual(
       executor.interactiveRunCommands,
       [
-        ExternalCommand(SystemCommand.sudo, ["-k"]),
         ExternalCommand(SystemCommand.sudo, ["-v"]),
       ]
     )
@@ -150,6 +149,7 @@ final class PowerServiceTests: XCTestCase {
     let service = PowerService(
       store: store,
       executor: executor,
+      privilegedExecutor: ordinarySudoPrivilegeExecutor(executor),
       clock: FixedClock(now: now),
       stateSaver: { _ in throw TestFailure.save }
     )
@@ -387,6 +387,7 @@ final class PowerServiceTests: XCTestCase {
     return PowerService(
       store: store,
       executor: executor,
+      privilegedExecutor: ordinarySudoPrivilegeExecutor(executor),
       clock: FixedClock(now: now),
       stateSaver: stateSaver
     )
@@ -412,7 +413,6 @@ final class PowerServiceTests: XCTestCase {
 
   private func privilegedMutationCommands(value: Int) -> [ExternalCommand] {
     [
-      ExternalCommand(SystemCommand.sudo, ["-k"]),
       ExternalCommand(SystemCommand.sudo, ["-v"]),
       ExternalCommand(
         SystemCommand.sudo,
@@ -501,9 +501,7 @@ private final class FakePowerMachine: @unchecked Sendable {
       guard command.executable == SystemCommand.sudo else {
         return CommandResult(exitCode: 1, standardError: "unexpected executable")
       }
-      if command.arguments == ["-k"] {
-        self.sudoWasValidated = false
-      } else if command.arguments == ["-v"] {
+      if command.arguments == ["-v"] {
         self.sudoWasValidated = true
       }
       guard command.arguments.first == SystemCommand.pmset else {

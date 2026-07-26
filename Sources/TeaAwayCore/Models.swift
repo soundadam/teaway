@@ -1,7 +1,7 @@
 import Foundation
 
 public enum TeaAwayVersion {
-  public static let current = "0.2.3"
+  public static let current = "0.3.0"
 }
 
 public enum PowerPhase: String, Codable, Equatable, Sendable {
@@ -125,6 +125,7 @@ public enum TeaAwayError: LocalizedError, Equatable {
   case shutdownScheduleUnreadable(String)
   case shutdownScheduleVerificationFailed(String)
   case shutdownRecoveryRequired(String, String)
+  case authorizationConfiguration(String)
   case commandFailed(String, Int32, String)
 
   public var errorDescription: String? {
@@ -170,6 +171,8 @@ public enum TeaAwayError: LocalizedError, Equatable {
     case .shutdownRecoveryRequired(let id, let detail):
       return
         "HIGH RISK: shutdown action \(id) may still be active; teaway retained its recovery record. Run 'teaway shutdown status' and then 'teaway shutdown cancel \(id)'. \(detail)"
+    case .authorizationConfiguration(let detail):
+      return "authorization configuration failed: \(detail)"
     case .commandFailed(let path, let status, let stderr):
       let detail = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
       return detail.isEmpty

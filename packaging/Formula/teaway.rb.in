@@ -1,5 +1,5 @@
 class Teaway < Formula
-  desc "Keep a closed Mac awake and schedule explicit delayed shutdowns"
+  desc "Run a Mac as an always-on server with reversible sleep control"
   homepage "https://github.com/@REPOSITORY@"
   url "https://github.com/@REPOSITORY@/archive/refs/tags/v@VERSION@.tar.gz"
   sha256 "@SHA256@"
