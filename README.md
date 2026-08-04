@@ -74,7 +74,7 @@ firewalls, DNS, or service startup.
 | `teaway shutdown cancel` | Cancel only the exact `teaway`-owned shutdown |
 | `teaway interactive` / `teaway tui` | Open a guided status and action menu |
 | `teaway auth status` | Inspect ordinary/registered authorization and sudo Touch ID configuration |
-| `teaway auth register` | Install the narrow per-user root helper after visible authorization |
+| `teaway auth register` | Set up narrow passwordless controls after one visible administrator check |
 | `teaway auth unregister` | Remove the helper and its sudoers rule |
 | `teaway version` | Print the installed version |
 
@@ -84,7 +84,8 @@ Durations accept `m`, `h`, and `d` units. Delayed shutdowns are bounded between
 Human-facing output explains results in plain language while retaining relevant
 native settings for diagnosis. Interactive mode offers the same bounded
 operations, exits after one action, and does not add a daemon or background
-process.
+process. When passwordless controls are not ready, the menu offers a one-time
+setup action and explains the authorization boundary before macOS prompts.
 
 ## Operating model
 
@@ -114,7 +115,9 @@ copied to a root-owned per-user helper and a validated sudoers rule permits only
 The rule does not permit arbitrary CLI commands, arbitrary `pmset` arguments,
 or a shell. Registration is an account-level trust decision and is intended for
 a trusted single-user macOS account. Re-run `teaway auth register` after an
-upgrade when `auth status` reports a helper version mismatch.
+upgrade when `auth status` reports a helper version mismatch. Registration tells
+you before invoking `sudo` that the one-time macOS password entry is hidden;
+teaway never reads or stores it.
 
 ### Shutdown ownership
 

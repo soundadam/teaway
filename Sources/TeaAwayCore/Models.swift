@@ -1,7 +1,7 @@
 import Foundation
 
 public enum TeaAwayVersion {
-  public static let current = "0.4.0"
+  public static let current = "0.4.1"
 }
 
 public enum PowerPhase: String, Codable, Equatable, Sendable {

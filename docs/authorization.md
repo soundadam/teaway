@@ -40,6 +40,12 @@ registration. The sudoers rule is validated before and after installation. The
 CLI checks that the root helper reports the same `teaway` version before using
 registered mode.
 
+Before macOS asks for authorization, the CLI explains that account-password
+input is hidden and handled by `sudo`; teaway never reads or stores it. This
+single visible administrator check installs the narrow rule so later registered
+mutations do not ask for a password. The guided menu exposes the same setup when
+registration is absent or needs repair.
+
 Registered mutations use `sudo -n` and do not prompt for a password or Touch ID
 while the installation remains healthy.
 

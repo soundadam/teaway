@@ -4,6 +4,14 @@ All notable changes to `teaway` are documented here.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-05
+
+### Changed
+
+- Made passwordless helper setup discoverable from the guided menu and explain
+  before macOS authorization that password entry is hidden, used once, and
+  never read or stored by teaway.
+
 ## [0.4.0] - 2026-08-05
 
 ### Changed

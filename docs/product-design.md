@@ -121,6 +121,18 @@ Version 0.4.0 makes the existing bounded operations easier to discover and use:
 - shutdown scheduling no longer requires a long typed phrase; and
 - stale shutdown records are cleared when their owned macOS event is absent.
 
+## 0.4.1 scope
+
+Version 0.4.1 clarifies and exposes the narrow passwordless setup:
+
+- the guided menu reports whether passwordless controls are ready and offers a
+  setup or repair action;
+- registration explains before invoking `sudo` that macOS handles hidden
+  password entry and teaway never reads or stores it;
+- the one-time administrator check and the exact delegated scope are stated
+  before installation; and
+- the guided setup exits after completing its single selected action.
+
 ## Deferred work
 
 Possible additions must remain opt-in and independently reversible:
