@@ -9,7 +9,7 @@ final class ApplicationTests: XCTestCase {
     defer { removeTemporaryStore(fixture.directory) }
 
     XCTAssertEqual(fixture.application.run(arguments: ["version"]), 0)
-    XCTAssertEqual(fixture.output, ["teaway 0.4.0"])
+    XCTAssertEqual(fixture.output, ["teaway 0.4.1"])
     XCTAssertTrue(fixture.errors.isEmpty)
   }
 
@@ -26,10 +26,17 @@ final class ApplicationTests: XCTestCase {
 
     XCTAssertEqual(fixture.application.run(arguments: ["auth", "register"]), 0)
     XCTAssertEqual(fixture.privilegeRegistration.registerCalls, 1)
-    XCTAssertTrue(fixture.output.contains("authorization: registered"))
-    XCTAssertTrue(fixture.output.contains("helper version: 0.4.0"))
+    XCTAssertTrue(fixture.output.contains("Set up passwordless Teaway controls"))
     XCTAssertTrue(
-      fixture.output.contains("scope: disablesleep and teaway-owned shutdown operations only")
+      fixture.output.contains("  Password input is hidden; no characters appear while you type.")
+    )
+    XCTAssertTrue(fixture.output.contains("  Teaway never reads or stores your password."))
+    XCTAssertTrue(fixture.output.contains("✓ Passwordless Teaway controls are ready."))
+    XCTAssertTrue(fixture.output.contains("  Helper version: 0.4.1"))
+    XCTAssertTrue(
+      fixture.output.contains(
+        "  Scope: awake mode and teaway-owned shutdown operations only"
+      )
     )
 
     XCTAssertEqual(fixture.application.run(arguments: ["auth", "unregister"]), 0)
@@ -42,6 +49,14 @@ final class ApplicationTests: XCTestCase {
 
     XCTAssertEqual(fixture.application.run(arguments: []), 0)
     XCTAssertTrue(fixture.output.contains("What would you like to do?"))
+    XCTAssertTrue(
+      fixture.output.contains(
+        "  Passwordless controls: Not set up — choose 5 to enable them"
+      )
+    )
+    XCTAssertTrue(
+      fixture.output.contains("  5  Set up passwordless controls (one-time admin check)")
+    )
     XCTAssertTrue(fixture.output.contains("Goodbye."))
     XCTAssertEqual(
       fixture.executor.runCommands,
@@ -204,6 +219,19 @@ final class ApplicationTests: XCTestCase {
 
     XCTAssertEqual(fixture.application.run(arguments: ["interactive"]), 0)
     XCTAssertEqual(machine.liveValue, 1)
+    XCTAssertEqual(
+      fixture.output.filter { $0 == "What would you like to do?" }.count,
+      1
+    )
+  }
+
+  func testInteractiveModeCanSetUpPasswordlessControlsAndExit() throws {
+    let fixture = try makeApplicationFixture(interactiveInput: ["5", "1"])
+    defer { removeTemporaryStore(fixture.directory) }
+
+    XCTAssertEqual(fixture.application.run(arguments: ["tui"]), 0)
+    XCTAssertEqual(fixture.privilegeRegistration.registerCalls, 1)
+    XCTAssertTrue(fixture.output.contains("Set up passwordless Teaway controls"))
     XCTAssertEqual(
       fixture.output.filter { $0 == "What would you like to do?" }.count,
       1

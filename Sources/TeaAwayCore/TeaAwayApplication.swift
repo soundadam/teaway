@@ -172,13 +172,20 @@ public final class TeaAwayApplication {
       outputAuthorizationStatus(try service.status())
       outputSudoTouchIDStatus(service.sudoTouchIDStatus())
     case "register":
+      output("Set up passwordless Teaway controls")
+      output("  macOS will ask for your account password once.")
+      output("  Password input is hidden; no characters appear while you type.")
+      output("  Teaway never reads or stores your password.")
+      output(
+        "  After setup, only awake-mode and teaway-owned shutdown operations run without a password."
+      )
       let result = try service.register()
-      output("authorization: registered")
-      output("helper version: \(result.helperVersion)")
-      output("helper: \(result.helperPath)")
-      output("sudoers: \(result.sudoersPath)")
-      output("scope: disablesleep and teaway-owned shutdown operations only")
-      output("warning: processes running as this macOS user can invoke this narrow privilege")
+      output("✓ Passwordless Teaway controls are ready.")
+      output("  Helper version: \(result.helperVersion)")
+      output("  Helper: \(result.helperPath)")
+      output("  Sudoers rule: \(result.sudoersPath)")
+      output("  Scope: awake mode and teaway-owned shutdown operations only")
+      output("  This permission is available to processes running as this macOS user.")
     case "unregister":
       try service.unregister()
       output("authorization: unregistered")
@@ -255,12 +262,19 @@ public final class TeaAwayApplication {
       output("")
       outputPowerStatus(try powerService.status())
       outputShutdownStatus(try shutdownService.status())
+      let authorizationStatus = try privilegeRegistrationService?.status()
+      if let authorizationStatus {
+        outputInteractiveAuthorizationStatus(authorizationStatus)
+      }
       output("")
       output("What would you like to do?")
       output("  1  Turn awake mode on")
       output("  2  Turn awake mode off")
       output("  3  Schedule a shutdown")
       output("  4  Cancel the scheduled shutdown")
+      if privilegeRegistrationService != nil {
+        output("  5  Set up passwordless controls (one-time admin check)")
+      }
       output("  r  Refresh status")
       output("  q  Quit")
       output("Choose an option:")
@@ -291,13 +305,16 @@ public final class TeaAwayApplication {
         case "4":
           _ = try runShutdown(["cancel"])
           return 0
+        case "5" where privilegeRegistrationService != nil:
+          _ = try runAuthorization(["register"])
+          return 0
         case "r":
           continue
         case "q", "quit", "exit":
           output("Goodbye.")
           return 0
         default:
-          output("I didn't recognize that option. Choose 1–4, r, or q.")
+          output("I didn't recognize that option. Choose 1–5, r, or q.")
         }
       } catch {
         errorOutput("Could not complete that action: \(error.localizedDescription)")
@@ -340,6 +357,17 @@ public final class TeaAwayApplication {
     case .needsRepair(let detail):
       output("authorization: needs-repair")
       output("detail: \(detail)")
+    }
+  }
+
+  private func outputInteractiveAuthorizationStatus(_ status: PrivilegeRegistrationStatus) {
+    switch status {
+    case .unregistered:
+      output("  Passwordless controls: Not set up — choose 5 to enable them")
+    case .registered:
+      output("  Passwordless controls: Ready")
+    case .needsRepair:
+      output("  Passwordless controls: Need refresh — choose 5 to repair them")
     }
   }
 
