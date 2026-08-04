@@ -25,6 +25,48 @@ final class ShutdownServiceTests: XCTestCase {
     XCTAssertEqual(try store.load().shutdown, record)
   }
 
+  func testPlanReplacesStaleRecordAfterVerifyingSystemEventIsAbsent() throws {
+    let (store, directory) = try makeTemporaryStore()
+    defer { removeTemporaryStore(directory) }
+    let stale = ShutdownRecord(
+      id: "stale-action",
+      owner: "teaway:stale-action",
+      createdAt: now.addingTimeInterval(-7_200),
+      scheduledAt: now.addingTimeInterval(-3_600),
+      phase: .committed
+    )
+    try store.save(TeaAwayState(shutdown: stale))
+    let executor = FakeExecutor()
+    executor.runHandler = { command in
+      XCTAssertEqual(command, ExternalCommand(SystemCommand.pmset, ["-g", "sched"]))
+      return CommandResult(exitCode: 0, standardOutput: self.scheduleOutput())
+    }
+    let service = makeService(store: store, executor: executor)
+
+    let replacement = try service.plan(afterSeconds: 3_600)
+
+    XCTAssertEqual(replacement.id, "action-1")
+    XCTAssertEqual(try store.load().shutdown, replacement)
+    XCTAssertEqual(executor.runCommands.count, 1)
+  }
+
+  func testStatusClearsStaleRecordAfterVerifyingSystemEventIsAbsent() throws {
+    let (store, directory) = try makeTemporaryStore()
+    defer { removeTemporaryStore(directory) }
+    try store.save(TeaAwayState(shutdown: makeRecord(phase: .committed)))
+    let executor = FakeExecutor()
+    executor.runHandler = { _ in
+      CommandResult(exitCode: 0, standardOutput: self.scheduleOutput())
+    }
+    let service = makeService(store: store, executor: executor)
+
+    XCTAssertEqual(
+      try service.status(),
+      ShutdownStatus(observation: .none, record: nil)
+    )
+    XCTAssertNil(try store.load().shutdown)
+  }
+
   func testCommitPersistsCommittingThenUsesFreshSudoAndVerifiesExactEvent() throws {
     let (store, directory) = try makeTemporaryStore()
     defer { removeTemporaryStore(directory) }
@@ -60,6 +102,33 @@ final class ShutdownServiceTests: XCTestCase {
     )
     XCTAssertEqual(inspection, 2)
     XCTAssertEqual(try store.load().shutdown, record)
+  }
+
+  func testSchedulingShutdownPreservesAwakeModeRecord() throws {
+    let (store, directory) = try makeTemporaryStore()
+    defer { removeTemporaryStore(directory) }
+    let power = PowerRecord(
+      originalDisableSleep: 0,
+      createdAt: now,
+      phase: .enabled
+    )
+    try store.save(TeaAwayState(power: power))
+    let executor = FakeExecutor()
+    var inspection = 0
+    executor.runHandler = { _ in
+      inspection += 1
+      return CommandResult(
+        exitCode: 0,
+        standardOutput: inspection == 1 ? self.scheduleOutput() : self.targetScheduleOutput()
+      )
+    }
+    let service = makeService(store: store, executor: executor)
+
+    let plan = try service.plan(afterSeconds: 3_600)
+    _ = try service.commit(actionID: plan.id)
+
+    XCTAssertEqual(try store.load().power, power)
+    XCTAssertEqual(try store.load().shutdown?.phase, .committed)
   }
 
   func testExpiredPlanNeverInspectsSystemOrInvokesSudo() throws {

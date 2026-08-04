@@ -72,7 +72,10 @@ public final class ShutdownService: @unchecked Sendable {
     try store.withExclusiveLock {
       var state = try store.load()
       if let existing = state.shutdown {
-        throw TeaAwayError.shutdownAlreadyExists(existing.id)
+        let events = try inspectSystemSchedule()
+        if events.contains(where: { $0.owner == existing.owner }) {
+          throw TeaAwayError.shutdownAlreadyExists(existing.id)
+        }
       }
 
       let id = identifiers.makeIdentifier()
@@ -185,42 +188,44 @@ public final class ShutdownService: @unchecked Sendable {
   }
 
   public func status() throws -> ShutdownStatus {
-    let state = try store.load()
-    guard let record = state.shutdown else {
-      return ShutdownStatus(observation: .none, record: nil)
-    }
+    try store.withExclusiveLock {
+      var state = try store.load()
+      guard let record = state.shutdown else {
+        return ShutdownStatus(observation: .none, record: nil)
+      }
 
-    let events = try inspectSystemSchedule()
-    let ownerEvents = events.filter { $0.owner == record.owner }
-    if ownerEvents.contains(where: { $0.type != "shutdown" }) || ownerEvents.count > 1 {
-      return ShutdownStatus(observation: .conflict, record: record)
-    }
+      let events = try inspectSystemSchedule()
+      let ownerEvents = events.filter { $0.owner == record.owner }
+      if ownerEvents.isEmpty {
+        state.shutdown = nil
+        try saveState(state)
+        return ShutdownStatus(observation: .none, record: nil)
+      }
+      if ownerEvents.contains(where: { $0.type != "shutdown" }) || ownerEvents.count > 1 {
+        return ShutdownStatus(observation: .conflict, record: record)
+      }
 
-    let exactTarget = try? targetEvent(for: record)
-    let exactExists = exactTarget.map(ownerEvents.contains) ?? false
-    let ownerShutdownExists = ownerEvents.contains(where: { $0.type == "shutdown" })
-    let unrelatedConflict = events.contains { event in
-      guard event.owner != record.owner else { return false }
-      return event.type == "shutdown" || Self.isRecognizedOwner(event.owner)
-    }
+      let exactTarget = try? targetEvent(for: record)
+      let exactExists = exactTarget.map(ownerEvents.contains) ?? false
+      let ownerShutdownExists = ownerEvents.contains(where: { $0.type == "shutdown" })
+      let unrelatedConflict = events.contains { event in
+        guard event.owner != record.owner else { return false }
+        return event.type == "shutdown" || Self.isRecognizedOwner(event.owner)
+      }
 
-    if unrelatedConflict || (ownerShutdownExists && !exactExists && exactTarget != nil) {
-      return ShutdownStatus(observation: .conflict, record: record)
-    }
+      if unrelatedConflict || (ownerShutdownExists && !exactExists && exactTarget != nil) {
+        return ShutdownStatus(observation: .conflict, record: record)
+      }
 
-    switch record.phase {
-    case .planned:
-      return ShutdownStatus(
-        observation: ownerShutdownExists ? .needsRecovery : .planned,
-        record: record
-      )
-    case .committing:
-      return ShutdownStatus(observation: .needsRecovery, record: record)
-    case .committed:
-      return ShutdownStatus(
-        observation: exactExists ? .scheduled : .missingFromSystem,
-        record: record
-      )
+      switch record.phase {
+      case .planned, .committing:
+        return ShutdownStatus(observation: .needsRecovery, record: record)
+      case .committed:
+        return ShutdownStatus(
+          observation: exactExists ? .scheduled : .conflict,
+          record: record
+        )
+      }
     }
   }
 

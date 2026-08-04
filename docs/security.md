@@ -63,9 +63,8 @@ state fails closed.
 ## Shutdown boundary
 
 Shutdown uses a separate transaction. `shutdown after` accepts only bounded
-explicit durations, prints the absolute deadline, timezone, hostname, owner,
-and action ID, then requires the complete displayed phrase from a real TTY.
-Non-interactive confirmation fails closed.
+explicit durations and prints the absolute deadline, timezone, hostname, owner,
+and action ID.
 
 Before and after mutation, `teaway` inspects `/usr/bin/pmset -g sched`. It rejects
 existing shutdowns or conflicting owners, persists the exact tuple before the

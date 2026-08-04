@@ -73,20 +73,6 @@ struct FixedIdentifierGenerator: IdentifierGenerating {
   func makeIdentifier() -> String { value }
 }
 
-final class FixedShutdownChallenger: ShutdownChallenging {
-  let confirmed: Bool
-  private(set) var expectedPhrases: [String] = []
-
-  init(confirmed: Bool) {
-    self.confirmed = confirmed
-  }
-
-  func confirm(expectedPhrase: String) -> Bool {
-    expectedPhrases.append(expectedPhrase)
-    return confirmed
-  }
-}
-
 func makeTemporaryStore() throws -> (StateStore, URL) {
   let directory = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaway-tests-\(UUID().uuidString)", isDirectory: true)

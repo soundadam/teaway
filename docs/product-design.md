@@ -62,6 +62,7 @@ teaway
 teaway on
 teaway off
 teaway status
+teaway interactive
 
 teaway shutdown after DURATION
 teaway shutdown status
@@ -75,8 +76,10 @@ teaway version
 teaway help
 ```
 
-No argument is equivalent to `status`. Durations require units and are rendered
-as an absolute local deadline with timezone before confirmation. `on` remains
+No argument opens the guided, single-action menu. `interactive` and `tui` are
+explicit aliases for the same interface. `status` remains the non-interactive
+status command. Durations require units and are rendered as an absolute local
+deadline with timezone. `on` remains
 enabled until `off` or system power-off; shutdown scheduling is independent.
 
 ## Guarantees
@@ -86,10 +89,12 @@ enabled until `off` or system power-off; shutdown scheduling is independent.
   state before reporting success.
 - `off` restores only a matching native-owned snapshot.
 - A live external `disablesleep=1` value is never adopted implicitly.
-- Shutdown scheduling requires a real TTY and the complete displayed phrase.
+- Shutdown scheduling requires an explicit bounded duration and exact system verification.
 - At most one `teaway` shutdown exists, and cancellation uses its exact tuple.
 - Private state is atomic and mode-restricted.
 - Privileged execution uses fixed system paths and allowlisted operations.
+- Interactive mode is a presentation layer over the same services and does not
+  introduce a daemon, listener, or broader privileged interface.
 - Registered mode delegates narrow operations to one macOS account, never an
   arbitrary shell or arbitrary `pmset` invocation.
 
@@ -104,6 +109,17 @@ Version 0.3.0 establishes the server-oriented release line:
 - GitHub-hosted macOS CI with read-only workflow permissions;
 - source-tag distribution through GitHub and Homebrew; and
 - operator, authorization, security, migration, and release documentation.
+
+## 0.4.0 scope
+
+Version 0.4.0 makes the existing bounded operations easier to discover and use:
+
+- no-argument `teaway` opens a one-action guided terminal menu;
+- `interactive` and `tui` are aliases for the same guided mode;
+- status and action results use approachable descriptions while preserving
+  diagnostic native values;
+- shutdown scheduling no longer requires a long typed phrase; and
+- stale shutdown records are cleared when their owned macOS event is absent.
 
 ## Deferred work
 

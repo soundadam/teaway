@@ -3,31 +3,31 @@ import Foundation
 public final class TeaAwayApplication {
   private let powerService: PowerService
   private let shutdownService: ShutdownService
-  private let shutdownChallenger: any ShutdownChallenging
   private let privilegeRegistrationService: (any PrivilegeRegistering)?
   private let output: (String) -> Void
   private let errorOutput: (String) -> Void
+  private let input: () -> String?
   private let displayDateFormatter: DateFormatter
   private let hostName: String
 
   public init(
     powerService: PowerService,
     shutdownService: ShutdownService,
-    shutdownChallenger: any ShutdownChallenging = SystemShutdownChallenger(),
     privilegeRegistrationService: (any PrivilegeRegistering)? = nil,
     output: @escaping (String) -> Void = { print($0) },
     errorOutput: @escaping (String) -> Void = { message in
       FileHandle.standardError.write(Data("\(message)\n".utf8))
     },
+    input: @escaping () -> String? = { readLine(strippingNewline: true) },
     timeZone: TimeZone = .current,
     hostName: String = ProcessInfo.processInfo.hostName
   ) {
     self.powerService = powerService
     self.shutdownService = shutdownService
-    self.shutdownChallenger = shutdownChallenger
     self.privilegeRegistrationService = privilegeRegistrationService
     self.output = output
     self.errorOutput = errorOutput
+    self.input = input
     self.hostName = hostName
     self.displayDateFormatter = DateFormatter()
     self.displayDateFormatter.locale = Locale(identifier: "en_US_POSIX")
@@ -60,7 +60,8 @@ public final class TeaAwayApplication {
         executor: executor
       ),
       output: output,
-      errorOutput: errorOutput
+      errorOutput: errorOutput,
+      input: { readLine(strippingNewline: true) }
     )
   }
 
@@ -82,12 +83,14 @@ public final class TeaAwayApplication {
 
   public static let usage = """
     Usage:
-      teaway [status]
+      teaway
+      teaway status
       teaway on
       teaway off
       teaway shutdown after DURATION
       teaway shutdown status
       teaway shutdown cancel [ACTION_ID]
+      teaway interactive
       teaway auth status
       teaway auth register
       teaway auth unregister
@@ -95,36 +98,37 @@ public final class TeaAwayApplication {
 
     'on' disables lid-close sleep and records the exact value needed by 'off'.
     'on' requires AC power; 'off' never changes a setting teaway does not own.
-    Run 'status' before leaving and verify remote reachability independently.
+    Run without arguments for the guided status and action menu.
     """
 
   private func execute(arguments: [String]) throws -> Int32 {
-    let command = arguments.first ?? "status"
+    guard let command = arguments.first else {
+      return try runInteractive()
+    }
 
     switch command {
     case "on":
       guard arguments.count == 1 else { throw TeaAwayError.usage(Self.usage) }
       let record = try powerService.turnOn()
-      output(
-        record.originalDisableSleep == record.expectedDisableSleep
-          ? "teaway: borrowed" : "teaway: on"
-      )
-      output("disablesleep: \(record.expectedDisableSleep)")
-      output("restore: \(record.originalDisableSleep)")
-      output("warning: verify remote reachability before closing the lid")
-      output("warning: keep this Mac powered, stationary, and well ventilated")
+      if record.originalDisableSleep == record.expectedDisableSleep {
+        output("✓ Awake mode was already enabled. Teaway is now tracking it.")
+      } else {
+        output("✓ Awake mode is on. This Mac will stay awake until you run `teaway off`.")
+      }
+      output("  Previous setting saved: disablesleep=\(record.originalDisableSleep)")
+      output("  Keep this Mac powered and well ventilated.")
       return 0
     case "off":
       guard arguments.count == 1 else { throw TeaAwayError.usage(Self.usage) }
       let result = try powerService.turnOff()
       if result.hadRecord {
-        output("teaway: off")
+        output("✓ Awake mode is off. The previous sleep setting was restored.")
       } else if result.restoredDisableSleep == 0 {
-        output("teaway: already off")
+        output("✓ Awake mode is already off. Nothing changed.")
       } else {
-        output("teaway: external; unchanged")
+        output("Awake mode is controlled elsewhere. Nothing changed.")
       }
-      output("disablesleep: \(result.restoredDisableSleep)")
+      output("  Current setting: disablesleep=\(result.restoredDisableSleep)")
       return 0
     case "status":
       guard arguments.count <= 1 else { throw TeaAwayError.usage(Self.usage) }
@@ -135,6 +139,9 @@ public final class TeaAwayApplication {
       return 0
     case "shutdown":
       return try runShutdown(Array(arguments.dropFirst()))
+    case "interactive", "tui":
+      guard arguments.count == 1 else { throw TeaAwayError.usage(Self.usage) }
+      return try runInteractive()
     case "auth":
       return try runAuthorization(Array(arguments.dropFirst()))
     case "version", "--version":
@@ -192,19 +199,11 @@ public final class TeaAwayApplication {
       guard tail.count == 1 else { throw TeaAwayError.usage(Self.usage) }
       let seconds = try DurationParser.parseShutdown(tail[0])
       let record = try shutdownService.plan(afterSeconds: seconds)
-      output("shutdown action: \(record.id)")
-      output("scheduled for: \(format(record.scheduledAt))")
-      output("host: \(hostName)")
-      output("owner: \(record.owner)")
-      let expectedPhrase = shutdownChallenge(for: record)
-      guard shutdownChallenger.confirm(expectedPhrase: expectedPhrase) else {
-        discardUncommittedShutdownPlan(record)
-        throw TeaAwayError.shutdownChallengeFailed
-      }
+      output("Scheduling shutdown for \(format(record.scheduledAt))…")
       let committedRecord = try shutdownService.commit(actionID: record.id)
-      output("shutdown committed: \(committedRecord.id)")
-      output("scheduled for: \(format(committedRecord.scheduledAt))")
-      output("cancel: teaway shutdown cancel")
+      output("✓ Shutdown scheduled for \(format(committedRecord.scheduledAt)).")
+      output("  Host: \(hostName)")
+      output("  Cancel it with: teaway shutdown cancel")
     case "status":
       guard tail.isEmpty else { throw TeaAwayError.usage(Self.usage) }
       outputShutdownStatus(try shutdownService.status())
@@ -220,44 +219,113 @@ public final class TeaAwayApplication {
         actionID = recordedAction.id
       }
       let record = try shutdownService.cancel(actionID: actionID)
-      output("shutdown cancelled: \(record.id)")
+      output("✓ Scheduled shutdown cancelled.")
+      output("  Action: \(record.id)")
     default:
       throw TeaAwayError.usage(Self.usage)
     }
     return 0
   }
 
-  private func discardUncommittedShutdownPlan(_ record: ShutdownRecord) {
-    do {
-      _ = try shutdownService.cancel(actionID: record.id)
-      output("shutdown plan discarded: \(record.id)")
-    } catch {
-      errorOutput(
-        "teaway: warning: shutdown plan \(record.id) could not be discarded; "
-          + "run 'teaway shutdown cancel \(record.id)'. \(error.localizedDescription)"
-      )
-    }
-  }
-
   private func outputPowerStatus(_ status: PowerStatus) {
-    output("teaway: \(status.observation.rawValue)")
-    output("power source: \(status.powerSource)")
-    output("disablesleep: \(status.liveDisableSleep)")
+    output("Teaway status")
+    output("  Awake mode: \(powerDescription(status.observation))")
+    output("  Power: \(status.powerSource)")
+    output("  Sleep setting: disablesleep=\(status.liveDisableSleep)")
     if let record = status.record {
-      output("phase: \(record.phase.rawValue)")
-      output("restore: \(record.originalDisableSleep)")
+      output("  Saved setting: disablesleep=\(record.originalDisableSleep)")
     }
   }
 
   private func outputShutdownStatus(_ status: ShutdownStatus) {
     guard let record = status.record else {
-      output("shutdown: none")
+      output("  Shutdown: Not scheduled")
       return
     }
-    output("shutdown: \(status.observation)")
-    output("id: \(record.id)")
-    output("owner: \(record.owner)")
-    output("scheduled for: \(format(record.scheduledAt))")
+    output("  Shutdown: \(shutdownDescription(status.observation))")
+    output("  Scheduled for: \(format(record.scheduledAt))")
+    output("  Action: \(record.id)")
+  }
+
+  private func runInteractive() throws -> Int32 {
+    output("Teaway")
+    output("Keep this Mac awake, then restore its previous sleep setting when you're done.")
+
+    while true {
+      output("")
+      outputPowerStatus(try powerService.status())
+      outputShutdownStatus(try shutdownService.status())
+      output("")
+      output("What would you like to do?")
+      output("  1  Turn awake mode on")
+      output("  2  Turn awake mode off")
+      output("  3  Schedule a shutdown")
+      output("  4  Cancel the scheduled shutdown")
+      output("  r  Refresh status")
+      output("  q  Quit")
+      output("Choose an option:")
+
+      guard let choice = input()?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+        output("Goodbye.")
+        return 0
+      }
+
+      do {
+        switch choice.lowercased() {
+        case "1":
+          _ = try execute(arguments: ["on"])
+          return 0
+        case "2":
+          _ = try execute(arguments: ["off"])
+          return 0
+        case "3":
+          output("Enter a delay such as 30m, 2h, or 1d:")
+          guard let duration = input()?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !duration.isEmpty
+          else {
+            output("No duration entered; nothing changed.")
+            return 0
+          }
+          _ = try runShutdown(["after", duration])
+          return 0
+        case "4":
+          _ = try runShutdown(["cancel"])
+          return 0
+        case "r":
+          continue
+        case "q", "quit", "exit":
+          output("Goodbye.")
+          return 0
+        default:
+          output("I didn't recognize that option. Choose 1–4, r, or q.")
+        }
+      } catch {
+        errorOutput("Could not complete that action: \(error.localizedDescription)")
+        return 1
+      }
+    }
+  }
+
+  private func powerDescription(_ observation: PowerObservation) -> String {
+    switch observation {
+    case .off: return "Off"
+    case .on: return "On — managed by teaway"
+    case .borrowed: return "On — teaway is preserving an existing setting"
+    case .external: return "On — controlled outside teaway"
+    case .needsRecovery: return "Needs recovery — run `teaway off`"
+    case .conflict: return "Conflict — inspect before making changes"
+    }
+  }
+
+  private func shutdownDescription(_ observation: ShutdownObservation) -> String {
+    switch observation {
+    case .none: return "Not scheduled"
+    case .planned: return "Being prepared"
+    case .scheduled: return "Scheduled"
+    case .missingFromSystem: return "No longer present in macOS"
+    case .needsRecovery: return "Needs recovery"
+    case .conflict: return "Conflict"
+    }
   }
 
   private func outputAuthorizationStatus(_ status: PrivilegeRegistrationStatus) {
@@ -290,9 +358,5 @@ public final class TeaAwayApplication {
 
   private func format(_ date: Date) -> String {
     displayDateFormatter.string(from: date)
-  }
-
-  private func shutdownChallenge(for record: ShutdownRecord) -> String {
-    "SHUTDOWN \(hostName) AT \(format(record.scheduledAt)) ID \(record.id)"
   }
 }

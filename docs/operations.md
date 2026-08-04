@@ -50,8 +50,14 @@ teaway on
 teaway status
 ```
 
-A healthy result reports AC power, `disablesleep: 1`, and an enabled owned
-phase. Verify remote reachability again before closing a laptop lid.
+A healthy result reports `Awake mode: On — managed by teaway`, AC power, and
+`disablesleep=1`. Verify remote reachability again before closing a laptop lid.
+
+For a guided status and action menu, run:
+
+```sh
+teaway interactive
+```
 
 `teaway on` is idempotent. Running it again does not create a second ownership
 record or overwrite the saved baseline.
@@ -72,8 +78,7 @@ there is no owned record, it refuses to adopt or clear an external live value.
 teaway shutdown after 2h
 ```
 
-The command prints the absolute local deadline, hostname, owner, and action ID,
-then requires the complete displayed `SHUTDOWN` phrase from a real terminal.
+The command prints the absolute local deadline, hostname, owner, and action ID.
 The schedule is committed only after macOS reports the exact event.
 
 Inspect or cancel it with:

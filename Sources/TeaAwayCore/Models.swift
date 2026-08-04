@@ -1,7 +1,7 @@
 import Foundation
 
 public enum TeaAwayVersion {
-  public static let current = "0.3.0"
+  public static let current = "0.4.0"
 }
 
 public enum PowerPhase: String, Codable, Equatable, Sendable {
@@ -120,7 +120,6 @@ public enum TeaAwayError: LocalizedError, Equatable {
   case noShutdown
   case actionIDMismatch
   case planExpired
-  case shutdownChallengeFailed
   case shutdownScheduleConflict(String)
   case shutdownScheduleUnreadable(String)
   case shutdownScheduleVerificationFailed(String)
@@ -158,9 +157,6 @@ public enum TeaAwayError: LocalizedError, Equatable {
       return "action ID does not match the recorded shutdown plan"
     case .planExpired:
       return "shutdown plan expired; create a new plan before committing"
-    case .shutdownChallengeFailed:
-      return
-        "shutdown commit requires an interactive terminal and the exact displayed SHUTDOWN phrase"
     case .shutdownScheduleConflict(let detail):
       return
         "refusing to change shutdown state because macOS reports a conflicting event: \(detail)"

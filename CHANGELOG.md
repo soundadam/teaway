@@ -4,8 +4,25 @@ All notable changes to `teaway` are documented here.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-05
+
+### Changed
+
+- Made status and action results more approachable while retaining native power
+  values where they help diagnosis.
+- Added `teaway interactive` (and `teaway tui`) as a guided menu over the same
+  bounded power and shutdown operations; it exits after completing one action.
+- Made the no-argument `teaway` entry point open that guided menu; explicit
+  `teaway status` remains available for non-interactive status output.
+- Removed the repeated remote-reachability warning from `teaway on`; reachability
+  remains an operator preflight documented in the operating guide.
+- Removed the long typed shutdown confirmation; the explicit bounded command now
+  schedules directly and still verifies the exact macOS event.
+
 ### Fixed
 
+- Reconciled stale shutdown journal entries when macOS no longer reports their
+  owned event, so they no longer block a later shutdown.
 - Made the rendered Homebrew Formula tests independent of physical
   `disablesleep` reporting and existing helper registration state.
 
