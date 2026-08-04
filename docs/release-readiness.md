@@ -2,10 +2,10 @@
 
 ## Release target
 
-Version 0.3.0 is the first release positioned explicitly for running a Mac as a
-small, always-on server. The public artifact is an immutable source tag; the
-Homebrew Formula builds the executable from that source. No unnotarized
-prebuilt binary is published.
+Version 0.4.0 adds a guided terminal experience, clearer human-facing output,
+and automatic reconciliation of stale shutdown records. The public artifact is
+an immutable source tag; the Homebrew Formula builds the executable from that
+source. No unnotarized prebuilt binary is published.
 
 ## Required evidence
 
@@ -18,24 +18,24 @@ prebuilt binary is published.
 - Repository description and topics cover macOS, headless operation, homelab,
   self-hosting, sleep prevention, Swift, and Homebrew without claiming network
   or workload features.
-- Version strings, changelog, release notes, tag, and Formula all equal 0.3.0.
+- Version strings, changelog, release notes, tag, and Formula all equal 0.4.0.
 
 ### Native behavior
 
-- No argument and `status` are read-only.
+- No argument opens the guided menu; `status` is the explicit read-only status command.
 - `on` captures, applies, and verifies the exact reversible awake state.
 - `off` restores only native-owned state and leaves external state unchanged.
 - Default authorization preserves the sudo credential timestamp.
 - Registered authorization grants only the allowlisted helper operations.
-- Shutdown scheduling uses bounded durations, a typed TTY challenge, exact
-  system verification, and compensating cancellation.
+- Shutdown scheduling uses bounded durations, exact system verification, and
+  compensating cancellation.
 - macOS 26 four-digit schedule output is normalized to the canonical tuple.
 - Failure and recovery paths retain enough state to fail closed.
 
 ### Validation
 
 - All Swift tests pass on the release source tree.
-- A release build reports `teaway 0.3.0`.
+- A release build reports `teaway 0.4.0`.
 - The hidden helper rejects non-root direct execution.
 - GitHub Actions passes for both push and pull-request events on a hosted macOS
   runner with read-only token permissions.
@@ -45,7 +45,7 @@ prebuilt binary is published.
 
 ### Distribution
 
-- The annotated `v0.3.0` tag points to the merged and CI-tested main commit.
+- The annotated `v0.4.0` tag points to the merged and CI-tested main commit.
 - The GitHub release describes the authorization trust decision and the need to
   refresh a stale helper after upgrades.
 - The source archive SHA-256 is calculated after the tag is published.
@@ -55,11 +55,11 @@ prebuilt binary is published.
 
 ## Release procedure
 
-1. Update the release branch to version 0.3.0 and complete the documentation.
+1. Update the release branch to version 0.4.0 and complete the documentation.
 2. Run local tests, release build, security invariants, and documentation checks.
 3. Push the branch and require successful pull-request CI.
 4. Merge the pull request into `main` and verify main CI.
-5. Create and push one annotated `v0.3.0` tag.
+5. Create and push one annotated `v0.4.0` tag.
 6. Publish GitHub release notes for the tag.
 7. Download the tag archive and calculate its SHA-256.
 8. Update, audit, source-install, and test the `soundadam/homebrew-tap` Formula.

@@ -9,7 +9,7 @@ final class ApplicationTests: XCTestCase {
     defer { removeTemporaryStore(fixture.directory) }
 
     XCTAssertEqual(fixture.application.run(arguments: ["version"]), 0)
-    XCTAssertEqual(fixture.output, ["teaway 0.3.0"])
+    XCTAssertEqual(fixture.output, ["teaway 0.4.0"])
     XCTAssertTrue(fixture.errors.isEmpty)
   }
 
@@ -27,7 +27,7 @@ final class ApplicationTests: XCTestCase {
     XCTAssertEqual(fixture.application.run(arguments: ["auth", "register"]), 0)
     XCTAssertEqual(fixture.privilegeRegistration.registerCalls, 1)
     XCTAssertTrue(fixture.output.contains("authorization: registered"))
-    XCTAssertTrue(fixture.output.contains("helper version: 0.3.0"))
+    XCTAssertTrue(fixture.output.contains("helper version: 0.4.0"))
     XCTAssertTrue(
       fixture.output.contains("scope: disablesleep and teaway-owned shutdown operations only")
     )
@@ -36,20 +36,35 @@ final class ApplicationTests: XCTestCase {
     XCTAssertEqual(fixture.privilegeRegistration.unregisterCalls, 1)
   }
 
-  func testNoArgumentsIsTopLevelStatus() throws {
-    let fixture = try makeApplicationFixture()
+  func testNoArgumentsEntersInteractiveMode() throws {
+    let fixture = try makeApplicationFixture(interactiveInput: ["q"])
     defer { removeTemporaryStore(fixture.directory) }
 
     XCTAssertEqual(fixture.application.run(arguments: []), 0)
-    XCTAssertEqual(
-      fixture.output,
-      ["teaway: off", "power source: AC Power", "disablesleep: 0", "shutdown: none"]
-    )
+    XCTAssertTrue(fixture.output.contains("What would you like to do?"))
+    XCTAssertTrue(fixture.output.contains("Goodbye."))
     XCTAssertEqual(
       fixture.executor.runCommands,
       [
         ExternalCommand(SystemCommand.pmset, ["-g"]),
         ExternalCommand(SystemCommand.pmset, ["-g", "batt"]),
+      ]
+    )
+  }
+
+  func testExplicitStatusRemainsNoninteractive() throws {
+    let fixture = try makeApplicationFixture()
+    defer { removeTemporaryStore(fixture.directory) }
+
+    XCTAssertEqual(fixture.application.run(arguments: ["status"]), 0)
+    XCTAssertEqual(
+      fixture.output,
+      [
+        "Teaway status",
+        "  Awake mode: Off",
+        "  Power: AC Power",
+        "  Sleep setting: disablesleep=0",
+        "  Shutdown: Not scheduled",
       ]
     )
   }
@@ -62,14 +77,15 @@ final class ApplicationTests: XCTestCase {
     XCTAssertEqual(
       fixture.output,
       [
-        "teaway: external",
-        "power source: AC Power",
-        "disablesleep: 1",
-        "shutdown: none",
+        "Teaway status",
+        "  Awake mode: On — controlled outside teaway",
+        "  Power: AC Power",
+        "  Sleep setting: disablesleep=1",
+        "  Shutdown: Not scheduled",
       ]
     )
     XCTAssertEqual(fixture.application.run(arguments: ["off"]), 0)
-    XCTAssertTrue(fixture.output.contains("teaway: external; unchanged"))
+    XCTAssertTrue(fixture.output.contains("Awake mode is controlled elsewhere. Nothing changed."))
     XCTAssertTrue(fixture.executor.interactiveRunCommands.isEmpty)
   }
 
@@ -80,12 +96,18 @@ final class ApplicationTests: XCTestCase {
     machine.install(on: fixture.executor)
 
     XCTAssertEqual(fixture.application.run(arguments: ["on"]), 0)
-    XCTAssertTrue(fixture.output.contains("teaway: on"))
-    XCTAssertTrue(fixture.output.contains("restore: 0"))
+    XCTAssertTrue(
+      fixture.output.contains(
+        "✓ Awake mode is on. This Mac will stay awake until you run `teaway off`."
+      )
+    )
+    XCTAssertFalse(fixture.output.contains(where: { $0.contains("remote reachability") }))
     XCTAssertEqual(machine.liveValue, 1)
 
     XCTAssertEqual(fixture.application.run(arguments: ["off"]), 0)
-    XCTAssertTrue(fixture.output.contains("teaway: off"))
+    XCTAssertTrue(
+      fixture.output.contains("✓ Awake mode is off. The previous sleep setting was restored.")
+    )
     XCTAssertEqual(machine.liveValue, 0)
     XCTAssertEqual(
       fixture.executor.interactiveRunCommands,
@@ -103,33 +125,7 @@ final class ApplicationTests: XCTestCase {
     XCTAssertFalse(fixture.errors.isEmpty)
   }
 
-  func testShutdownAfterChallengeFailureDiscardsPlanWithoutSudo() throws {
-    let fixture = try makeApplicationFixture(shutdownChallengeConfirmed: false)
-    defer { removeTemporaryStore(fixture.directory) }
-
-    XCTAssertEqual(
-      fixture.application.run(arguments: ["shutdown", "after", "10m"]),
-      1
-    )
-
-    XCTAssertTrue(fixture.executor.interactiveRunCommands.isEmpty)
-    XCTAssertEqual(
-      fixture.executor.runCommands,
-      [ExternalCommand(SystemCommand.pmset, ["-g", "sched"])]
-    )
-    XCTAssertEqual(
-      fixture.shutdownChallenger.expectedPhrases,
-      ["SHUTDOWN mac.example AT 2023-11-14 22:23:20 Z ID action-1"]
-    )
-    XCTAssertTrue(fixture.output.contains("shutdown action: action-1"))
-    XCTAssertTrue(fixture.output.contains("scheduled for: 2023-11-14 22:23:20 Z"))
-    XCTAssertTrue(fixture.output.contains("host: mac.example"))
-    XCTAssertTrue(fixture.output.contains("shutdown plan discarded: action-1"))
-    XCTAssertNil(try fixture.store.load().shutdown)
-    XCTAssertTrue(fixture.errors.last?.contains("interactive terminal") == true)
-  }
-
-  func testShutdownAfterCommitsAndCancelWithoutIDUsesRecordedAction() throws {
+  func testShutdownAfterCommitsDirectlyAndCancelWithoutIDUsesRecordedAction() throws {
     let fixture = try makeApplicationFixture()
     defer { removeTemporaryStore(fixture.directory) }
     let machine = ApplicationShutdownMachine()
@@ -141,22 +137,18 @@ final class ApplicationTests: XCTestCase {
     )
     XCTAssertTrue(machine.scheduled)
     XCTAssertEqual(try fixture.store.load().shutdown?.phase, .committed)
-    XCTAssertEqual(
-      fixture.shutdownChallenger.expectedPhrases,
-      ["SHUTDOWN mac.example AT 2023-11-14 22:23:20 Z ID action-1"]
-    )
-    XCTAssertTrue(fixture.output.contains("shutdown committed: action-1"))
-    XCTAssertTrue(fixture.output.contains("cancel: teaway shutdown cancel"))
+    XCTAssertTrue(fixture.output.contains("✓ Shutdown scheduled for 2023-11-14 22:23:20 Z."))
+    XCTAssertTrue(fixture.output.contains("  Cancel it with: teaway shutdown cancel"))
 
     XCTAssertEqual(fixture.application.run(arguments: ["status"]), 0)
-    XCTAssertTrue(fixture.output.contains("teaway: off"))
-    XCTAssertTrue(fixture.output.contains("shutdown: scheduled"))
-    XCTAssertTrue(fixture.output.contains("id: action-1"))
+    XCTAssertTrue(fixture.output.contains("  Awake mode: Off"))
+    XCTAssertTrue(fixture.output.contains("  Shutdown: Scheduled"))
+    XCTAssertTrue(fixture.output.contains("  Action: action-1"))
 
     XCTAssertEqual(fixture.application.run(arguments: ["shutdown", "cancel"]), 0)
     XCTAssertFalse(machine.scheduled)
     XCTAssertNil(try fixture.store.load().shutdown)
-    XCTAssertTrue(fixture.output.contains("shutdown cancelled: action-1"))
+    XCTAssertTrue(fixture.output.contains("✓ Scheduled shutdown cancelled."))
     XCTAssertEqual(
       fixture.executor.interactiveRunCommands,
       privilegedShutdownCommands(cancel: false) + privilegedShutdownCommands(cancel: true)
@@ -190,9 +182,37 @@ final class ApplicationTests: XCTestCase {
     XCTAssertTrue(fixture.executor.interactiveRunCommands.isEmpty)
   }
 
+  func testInteractiveAndTUIAliasesShowTheSameGuidedMenu() throws {
+    for command in ["interactive", "tui"] {
+      let fixture = try makeApplicationFixture(interactiveInput: ["q"])
+      defer { removeTemporaryStore(fixture.directory) }
+
+      XCTAssertEqual(fixture.application.run(arguments: [command]), 0)
+      XCTAssertTrue(fixture.output.contains("Teaway"))
+      XCTAssertTrue(fixture.output.contains("What would you like to do?"))
+      XCTAssertTrue(fixture.output.contains("  1  Turn awake mode on"))
+      XCTAssertTrue(fixture.output.contains("Goodbye."))
+      XCTAssertTrue(fixture.executor.interactiveRunCommands.isEmpty)
+    }
+  }
+
+  func testInteractiveModeExitsAfterOneCompletedAction() throws {
+    let fixture = try makeApplicationFixture(interactiveInput: ["1", "2"])
+    defer { removeTemporaryStore(fixture.directory) }
+    let machine = ApplicationPowerMachine(liveValue: 0)
+    machine.install(on: fixture.executor)
+
+    XCTAssertEqual(fixture.application.run(arguments: ["interactive"]), 0)
+    XCTAssertEqual(machine.liveValue, 1)
+    XCTAssertEqual(
+      fixture.output.filter { $0 == "What would you like to do?" }.count,
+      1
+    )
+  }
+
   private func makeApplicationFixture(
-    shutdownChallengeConfirmed: Bool = true,
-    disableSleep: Int = 0
+    disableSleep: Int = 0,
+    interactiveInput: [String] = []
   ) throws -> ApplicationFixture {
     let (store, directory) = try makeTemporaryStore()
     let executor = FakeExecutor()
@@ -214,9 +234,7 @@ final class ApplicationTests: XCTestCase {
     let clock = FixedClock(now: Date(timeIntervalSince1970: 1_700_000_000))
     var output: [String] = []
     var errors: [String] = []
-    let shutdownChallenger = FixedShutdownChallenger(
-      confirmed: shutdownChallengeConfirmed
-    )
+    var inputs = interactiveInput
     let privilegeRegistration = FakePrivilegeRegistrationService()
     let application = TeaAwayApplication(
       powerService: PowerService(
@@ -233,10 +251,10 @@ final class ApplicationTests: XCTestCase {
         identifiers: FixedIdentifierGenerator(value: "action-1"),
         timeZone: TimeZone(secondsFromGMT: 0)!
       ),
-      shutdownChallenger: shutdownChallenger,
       privilegeRegistrationService: privilegeRegistration,
       output: { output.append($0) },
       errorOutput: { errors.append($0) },
+      input: { inputs.isEmpty ? nil : inputs.removeFirst() },
       timeZone: TimeZone(secondsFromGMT: 0)!,
       hostName: "mac.example"
     )
@@ -244,7 +262,6 @@ final class ApplicationTests: XCTestCase {
       application: application,
       store: store,
       executor: executor,
-      shutdownChallenger: shutdownChallenger,
       privilegeRegistration: privilegeRegistration,
       directory: directory,
       outputReader: { output },
@@ -279,7 +296,6 @@ private final class ApplicationFixture {
   let application: TeaAwayApplication
   let store: StateStore
   let executor: FakeExecutor
-  let shutdownChallenger: FixedShutdownChallenger
   let privilegeRegistration: FakePrivilegeRegistrationService
   let directory: URL
   private let outputReader: () -> [String]
@@ -289,7 +305,6 @@ private final class ApplicationFixture {
     application: TeaAwayApplication,
     store: StateStore,
     executor: FakeExecutor,
-    shutdownChallenger: FixedShutdownChallenger,
     privilegeRegistration: FakePrivilegeRegistrationService,
     directory: URL,
     outputReader: @escaping () -> [String],
@@ -298,7 +313,6 @@ private final class ApplicationFixture {
     self.application = application
     self.store = store
     self.executor = executor
-    self.shutdownChallenger = shutdownChallenger
     self.privilegeRegistration = privilegeRegistration
     self.directory = directory
     self.outputReader = outputReader
