@@ -9,7 +9,7 @@ final class ApplicationTests: XCTestCase {
     defer { removeTemporaryStore(fixture.directory) }
 
     XCTAssertEqual(fixture.application.run(arguments: ["version"]), 0)
-    XCTAssertEqual(fixture.output, ["teaway 0.4.1"])
+    XCTAssertEqual(fixture.output, ["teaway 0.4.2"])
     XCTAssertTrue(fixture.errors.isEmpty)
   }
 
@@ -32,7 +32,7 @@ final class ApplicationTests: XCTestCase {
     )
     XCTAssertTrue(fixture.output.contains("  Teaway never reads or stores your password."))
     XCTAssertTrue(fixture.output.contains("✓ Passwordless Teaway controls are ready."))
-    XCTAssertTrue(fixture.output.contains("  Helper version: 0.4.1"))
+    XCTAssertTrue(fixture.output.contains("  Helper version: 0.4.2"))
     XCTAssertTrue(
       fixture.output.contains(
         "  Scope: awake mode and teaway-owned shutdown operations only"

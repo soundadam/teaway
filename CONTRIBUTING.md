@@ -41,5 +41,6 @@ swift build -c release --product teaway
 .build/release/teaway version
 ```
 
-Hardware acceptance must be deliberate, reversible, performed on AC power, and
-end with `disablesleep=0` and no `teaway` shutdown event.
+Hardware acceptance must be deliberate, reversible, and end with
+`disablesleep=0` and no `teaway` shutdown event. Prefer AC power for long
+hardware runs so the battery cannot drain mid-test.

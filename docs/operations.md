@@ -8,13 +8,15 @@ It does not configure or supervise the services that run on the machine.
 
 Confirm each item independently:
 
-1. The Mac runs macOS 13 or later and is connected to AC power.
+1. The Mac runs macOS 13 or later.
 2. Remote Login, Screen Sharing, a VPN, or another access method is already
    configured and tested from a second device.
 3. Required workloads start independently of the current terminal session—for
    example through launchd, a service manager, a CI runner, or a documented
    manual procedure.
-4. The Mac is stationary on a hard, open, well-ventilated surface.
+4. The Mac is stationary on a hard, open, well-ventilated surface. AC power is
+   recommended for unattended use so the battery cannot silently drain, but
+   `teaway on` works the same on battery or AC.
 5. Backups, monitoring, network recovery, and power-loss behavior are understood.
 6. No other tool is expected to own the same `disablesleep` setting.
 
@@ -50,8 +52,9 @@ teaway on
 teaway status
 ```
 
-A healthy result reports `Awake mode: On — managed by teaway`, AC power, and
-`disablesleep=1`. Verify remote reachability again before closing a laptop lid.
+A healthy result reports `Awake mode: On — managed by teaway` and
+`disablesleep=1`. `status` also reports the current power source; that value is
+informational. Verify remote reachability again before closing a laptop lid.
 
 For a guided status and action menu, run:
 

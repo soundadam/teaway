@@ -61,9 +61,7 @@ final class PowerServiceTests: XCTestCase {
     XCTAssertEqual(
       executor.runCommands,
       [
-        ExternalCommand(SystemCommand.pmset, ["-g", "batt"]),
         ExternalCommand(SystemCommand.pmset, ["-g"]),
-        ExternalCommand(SystemCommand.pmset, ["-g", "batt"]),
         ExternalCommand(SystemCommand.pmset, ["-g"]),
       ]
     )
@@ -100,45 +98,29 @@ final class PowerServiceTests: XCTestCase {
     XCTAssertNil(try store.load().power)
   }
 
-  func testOnFailsBeforeSavingOrSudoWhenInitiallyOnBattery() throws {
+  func testOnSucceedsOnBatteryTheSameAsOnACPower() throws {
     let (store, directory) = try makeTemporaryStore()
     defer { removeTemporaryStore(directory) }
     let executor = FakeExecutor()
-    FakePowerMachine(liveValue: 0, powerSources: ["Battery Power"]).install(on: executor)
-    let service = makeService(store: store, executor: executor)
-
-    XCTAssertThrowsError(try service.turnOn()) { error in
-      XCTAssertEqual(error as? TeaAwayError, .requiresACPower)
-    }
-    XCTAssertEqual(
-      executor.runCommands,
-      [ExternalCommand(SystemCommand.pmset, ["-g", "batt"])]
-    )
-    XCTAssertTrue(executor.interactiveRunCommands.isEmpty)
-    XCTAssertNil(try store.load().power)
-  }
-
-  func testOnRechecksACAfterSudoValidationBeforePmsetAndRetainsIntentIfPowerWasLost() throws {
-    let (store, directory) = try makeTemporaryStore()
-    defer { removeTemporaryStore(directory) }
-    let executor = FakeExecutor()
-    let machine = FakePowerMachine(
-      liveValue: 0,
-      powerSources: ["AC Power", "Battery Power"]
-    )
+    let machine = FakePowerMachine(liveValue: 0, powerSources: ["Battery Power"])
     machine.install(on: executor)
     let service = makeService(store: store, executor: executor)
 
-    assertRecoveryError(try service.turnOn())
+    let record = try service.turnOn()
 
+    XCTAssertEqual(record.phase, .enabled)
+    XCTAssertEqual(record.originalDisableSleep, 0)
+    XCTAssertEqual(machine.liveValue, 1)
+    XCTAssertEqual(executor.interactiveRunCommands, privilegedMutationCommands(value: 1))
     XCTAssertEqual(
-      executor.interactiveRunCommands,
-      [
-        ExternalCommand(SystemCommand.sudo, ["-v"]),
-      ]
+      try service.status(),
+      PowerStatus(
+        observation: .on,
+        liveDisableSleep: 1,
+        powerSource: "Battery Power",
+        record: record
+      )
     )
-    XCTAssertEqual(machine.sudoValidationStatesAtACReads, [false, true])
-    XCTAssertEqual(try store.load().power, makePowerRecord(phase: .enabling))
   }
 
   func testOnDoesNotMutateWhenInitialIntentSaveFails() throws {
@@ -459,12 +441,10 @@ private final class ControlledStateSaver: @unchecked Sendable {
 
 private final class FakePowerMachine: @unchecked Sendable {
   var liveValue: Int
-  private(set) var sudoValidationStatesAtACReads: [Bool] = []
   let mutationExitCode: Int32
   let applyMutation: Bool
   private let powerSources: [String]
   private var powerSourceReadCount = 0
-  private var sudoWasValidated = false
 
   init(
     liveValue: Int,
@@ -481,7 +461,6 @@ private final class FakePowerMachine: @unchecked Sendable {
   func install(on executor: FakeExecutor) {
     executor.runHandler = { command in
       if command == ExternalCommand(SystemCommand.pmset, ["-g", "batt"]) {
-        self.sudoValidationStatesAtACReads.append(self.sudoWasValidated)
         let index = min(self.powerSourceReadCount, self.powerSources.count - 1)
         self.powerSourceReadCount += 1
         return CommandResult(
@@ -500,9 +479,6 @@ private final class FakePowerMachine: @unchecked Sendable {
     executor.interactiveRunHandler = { command in
       guard command.executable == SystemCommand.sudo else {
         return CommandResult(exitCode: 1, standardError: "unexpected executable")
-      }
-      if command.arguments == ["-v"] {
-        self.sudoWasValidated = true
       }
       guard command.arguments.first == SystemCommand.pmset else {
         return CommandResult(exitCode: 0)

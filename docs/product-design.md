@@ -16,12 +16,11 @@ The primary audiences are:
 - an operator running a long backup, import, render, transfer, or media job; and
 - a remote user who needs power behavior to remain independent of one terminal.
 
-The product succeeds when the operator can answer four questions immediately:
+The product succeeds when the operator can answer three questions immediately:
 
-1. Is the Mac on a supported power source?
-2. Is `teaway` currently responsible for disabling sleep?
-3. Can it restore the exact setting it owns?
-4. Is a `teaway` shutdown scheduled, and can it cancel only that event?
+1. Is `teaway` currently responsible for disabling sleep?
+2. Can it restore the exact setting it owns?
+3. Is a `teaway` shutdown scheduled, and can it cancel only that event?
 
 ## Product boundary
 
@@ -85,8 +84,8 @@ enabled until `off` or system power-off; shutdown scheduling is independent.
 ## Guarantees
 
 - Read-only commands do not request authorization or mutate power state.
-- `on` requires AC power, persists intent before mutation, and verifies the live
-  state before reporting success.
+- `on` persists intent before mutation, verifies the live state before reporting
+  success, and treats battery and AC power the same.
 - `off` restores only a matching native-owned snapshot.
 - A live external `disablesleep=1` value is never adopted implicitly.
 - Shutdown scheduling requires an explicit bounded duration and exact system verification.
@@ -132,6 +131,14 @@ Version 0.4.1 clarifies and exposes the narrow passwordless setup:
 - the one-time administrator check and the exact delegated scope are stated
   before installation; and
 - the guided setup exits after completing its single selected action.
+
+## 0.4.2 scope
+
+Version 0.4.2 removes the AC-power gate from awake mode:
+
+- `teaway on` works the same on battery and AC power;
+- status still reports the current power source as information only; and
+- operator-facing documentation stays on the installed CLI.
 
 ## Deferred work
 

@@ -4,6 +4,15 @@ All notable changes to `teaway` are documented here.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-08-19
+
+### Changed
+
+- Allowed `teaway on` on battery and AC power alike. Status still reports the
+  current power source, but it is no longer a gate.
+- Kept operator-facing documentation on the `teaway` command. Implementation
+  language details stay in contributor and supply-chain docs.
+
 ## [0.4.1] - 2026-08-05
 
 ### Changed

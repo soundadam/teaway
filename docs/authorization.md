@@ -18,9 +18,8 @@ Neither mode reads, stores, transmits, or logs an administrator password.
 For a mutation, an unregistered installation:
 
 1. runs `sudo -v` interactively;
-2. rechecks safety preconditions that may have changed during authentication;
-3. invokes one fixed `/usr/bin/pmset` operation through `sudo`; and
-4. verifies the resulting macOS state.
+2. invokes one fixed `/usr/bin/pmset` operation through `sudo`; and
+3. verifies the resulting macOS state.
 
 The implementation never invokes `sudo -k`. Touch ID is available only when the
 administrator has enabled `pam_tid.so` for sudo. `teaway auth status` reports an

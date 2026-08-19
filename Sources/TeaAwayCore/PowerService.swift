@@ -63,9 +63,6 @@ public final class PowerService: @unchecked Sendable {
   public func turnOn() throws -> PowerRecord {
     try store.withExclusiveLock {
       var state = try store.load()
-      guard try isOnACPower() else {
-        throw TeaAwayError.requiresACPower
-      }
       let liveValue = try inspectDisableSleep()
 
       if var record = state.power {
@@ -166,10 +163,7 @@ public final class PowerService: @unchecked Sendable {
 
       if record.originalDisableSleep != record.expectedDisableSleep {
         do {
-          try setDisableSleep(
-            record.originalDisableSleep,
-            requireACPowerBeforeMutation: false
-          )
+          try setDisableSleep(record.originalDisableSleep)
         } catch {
           throw TeaAwayError.powerRecoveryRequired(
             "Restoring disablesleep failed: \(error.localizedDescription)"
@@ -276,10 +270,7 @@ public final class PowerService: @unchecked Sendable {
   ) throws -> PowerRecord {
     if record.originalDisableSleep != record.expectedDisableSleep {
       do {
-        try setDisableSleep(
-          record.expectedDisableSleep,
-          requireACPowerBeforeMutation: true
-        )
+        try setDisableSleep(record.expectedDisableSleep)
       } catch {
         throw TeaAwayError.powerRecoveryRequired(
           "Enabling disablesleep failed: \(error.localizedDescription)"
@@ -334,10 +325,6 @@ public final class PowerService: @unchecked Sendable {
     return try Self.parseDisableSleep(from: result.standardOutput)
   }
 
-  private func isOnACPower() throws -> Bool {
-    try inspectPowerSource() == "AC Power"
-  }
-
   private func inspectPowerSource() throws -> String {
     let result = try executor.checkedRun(
       ExternalCommand(SystemCommand.pmset, ["-g", "batt"])
@@ -362,16 +349,8 @@ public final class PowerService: @unchecked Sendable {
     )
   }
 
-  private func setDisableSleep(
-    _ value: Int,
-    requireACPowerBeforeMutation: Bool
-  ) throws {
+  private func setDisableSleep(_ value: Int) throws {
     try privilegedExecutor.authorize()
-    if requireACPowerBeforeMutation {
-      guard try isOnACPower() else {
-        throw TeaAwayError.requiresACPower
-      }
-    }
     try privilegedExecutor.runAuthorized(.setDisableSleep(value))
   }
 
