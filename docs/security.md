@@ -16,11 +16,10 @@ scheduled events. Homebrew tests are restricted to read-only behavior.
 ### Ordinary sudo
 
 Without registration, a mutation validates authorization with `sudo -v`,
-preserves any existing credential timestamp, rechecks mutable safety
-preconditions, and invokes one fixed `pmset` operation. The implementation does
-not use `sudo -k`. Authentication method selection—including Touch ID when PAM
-is configured for it—belongs to macOS. `teaway auth status` is diagnostic and
-never edits PAM.
+preserves any existing credential timestamp, and invokes one fixed `pmset`
+operation. The implementation does not use `sudo -k`. Authentication method
+selection—including Touch ID when PAM is configured for it—belongs to macOS.
+`teaway auth status` is diagnostic and never edits PAM.
 
 ### Registered helper
 
@@ -48,7 +47,7 @@ refreshed.
 
 `on` is an owned transaction:
 
-1. Inspect AC power and the current sleep setting.
+1. Inspect the current sleep setting.
 2. Persist the exact pre-change value in private native state.
 3. Authorize and apply `disablesleep=1`.
 4. Verify the live state before committing ownership.
@@ -78,9 +77,11 @@ commands such as `pmset cancelall` and never cancels unrelated Apple wake events
 
 ## Operational boundary
 
-Keeping a closed laptop awake reduces thermal margin. Supported operation
-requires AC power, a stationary Mac, and an open, well-ventilated surface. A
-bag, drawer, bedding, or other confined location is outside the supported model.
+Keeping a closed laptop awake reduces thermal margin. Unattended closed-lid
+operation is safest on a stationary Mac with an open, well-ventilated surface.
+Remaining on AC power is recommended so the battery cannot silently drain, but
+`teaway` does not refuse battery power. A bag, drawer, bedding, or other
+confined location is outside the supported model.
 
 `teaway` does not guarantee availability. Network loss, power failure, storage
 failure, crashes, forced updates, hardware faults, and service failure remain

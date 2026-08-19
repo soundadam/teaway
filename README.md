@@ -3,7 +3,6 @@
 [![CI](https://github.com/soundadam/teaway/actions/workflows/ci.yml/badge.svg)](https://github.com/soundadam/teaway/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/soundadam/teaway)](https://github.com/soundadam/teaway/releases/latest)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black)](https://github.com/soundadam/teaway#requirements)
-[![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-f05138)](https://www.swift.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > **Run a Mac like an always-on server.**
@@ -56,8 +55,10 @@ teaway shutdown cancel
 teaway off
 ```
 
-Before closing a laptop lid, verify that the Mac is on AC power, stationary,
-well ventilated, and reachable through the remote-access method you configured.
+Before closing a laptop lid, verify that the Mac is stationary, well
+ventilated, and reachable through the remote-access method you configured.
+Remaining on AC power is still a good idea for unattended use because the
+battery will drain, but `teaway on` works the same on battery or AC.
 `teaway` deliberately does not configure Remote Login, Screen Sharing, VPNs,
 firewalls, DNS, or service startup.
 
@@ -93,7 +94,7 @@ setup action and explains the authorization boundary before macOS prompts.
 
 `teaway on` performs a small transaction:
 
-1. Require AC power and inspect the current macOS sleep setting.
+1. Inspect the current macOS sleep setting.
 2. Persist the exact pre-change value in private state.
 3. Apply `disablesleep=1` through a fixed privileged operation.
 4. Re-read macOS state and report success only after verification.
@@ -132,9 +133,7 @@ stale journal entry and a later `shutdown after` can proceed normally.
 
 - macOS 13 Ventura or later
 - Apple silicon or Intel Mac supported by the installed macOS release
-- AC power for `teaway on`
 - Administrator authorization for power mutations or helper registration
-- Swift 5.9 / Xcode 15 or later when building from source
 
 ## Safety and availability limits
 
@@ -156,18 +155,9 @@ brew update
 brew upgrade teaway
 ```
 
-The Homebrew Formula builds from the immutable GitHub source tag. Public
-releases do not ship an unnotarized prebuilt executable.
-
-To build directly:
-
-```sh
-git clone https://github.com/soundadam/teaway.git
-cd teaway
-swift test
-swift build -c release --product teaway
-.build/release/teaway version
-```
+The Homebrew Formula builds the `teaway` command from the immutable GitHub
+source tag. Public releases do not ship an unnotarized prebuilt executable.
+To work on the source tree, see [Contributing](CONTRIBUTING.md).
 
 Homebrew installs only `teaway`. The shorter `tea` name belongs to another
 Homebrew package and may be used only as a personal shell alias or shim.

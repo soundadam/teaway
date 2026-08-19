@@ -1,7 +1,7 @@
 import Foundation
 
 public enum TeaAwayVersion {
-  public static let current = "0.4.1"
+  public static let current = "0.4.2"
 }
 
 public enum PowerPhase: String, Codable, Equatable, Sendable {
@@ -112,7 +112,6 @@ public enum TeaAwayError: LocalizedError, Equatable {
   case durationOutOfRange(minimum: Int, maximum: Int)
   case stateLocked
   case stateCorrupt(String)
-  case requiresACPower
   case powerSettingUnreadable(String)
   case powerConflict(expected: Int, actual: Int)
   case powerRecoveryRequired(String)
@@ -139,8 +138,6 @@ public enum TeaAwayError: LocalizedError, Equatable {
       return "another teaway operation is updating state"
     case .stateCorrupt(let message):
       return "teaway state is unreadable: \(message)"
-    case .requiresACPower:
-      return "teaway on requires AC power"
     case .powerSettingUnreadable(let detail):
       return "cannot safely read macOS disablesleep state: \(detail)"
     case .powerConflict(let expected, let actual):

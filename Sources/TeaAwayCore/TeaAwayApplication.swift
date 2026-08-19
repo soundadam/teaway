@@ -97,7 +97,7 @@ public final class TeaAwayApplication {
       teaway version
 
     'on' disables lid-close sleep and records the exact value needed by 'off'.
-    'on' requires AC power; 'off' never changes a setting teaway does not own.
+    'off' never changes a setting teaway does not own.
     Run without arguments for the guided status and action menu.
     """
 
