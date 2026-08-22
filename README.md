@@ -7,6 +7,8 @@
 
 > **Run a Mac like an always-on server.**
 
+Product page: [soundadam.com/projects/teaway](https://soundadam.com/projects/teaway/)
+
 `teaway` is a focused macOS command-line tool for headless and long-running Mac
 setups. It keeps a Mac working when normal sleep would interrupt it—including a
 MacBook with the lid closed—then restores the exact power setting it owned. It
