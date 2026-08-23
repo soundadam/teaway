@@ -1,58 +1,33 @@
 ---
 title: "Using teaway"
-description: "Open the client with `teaway`. The same actions are available as commands for scripts."
+description: "Open the client with `teaway`. Same actions exist as commands for scripts."
 ---
 
-Run `teaway` with no arguments. That is the client.
+<Frame>
+  <img src="/images/client.png" alt="The teaway client" />
+</Frame>
 
-The menu shows the current awake, shutdown, and passwordless state, then stays open so you can:
+Run `teaway`. That's it. The menu stays open across actions.
 
-- keep this Mac awake
-- allow sleep again
-- schedule a shutdown (10 minutes to 7 days)
-- cancel the teaway-owned shutdown
-- set up or repair passwordless controls when a change needs them
+Passwordless setup is optional. The client asks before the first privileged change; macOS handles the hidden password prompt. Only do this on an account you trust.
 
-Passwordless setup is optional and meant for a **trusted single-user account**. The client explains before macOS asks that teaway never reads the password. Shared or untrusted accounts should keep using ordinary `sudo`.
+<Frame>
+  <img src="/images/shutdown.png" alt="Schedule a shutdown" />
+</Frame>
 
-Do not launch `teaway` with `sudo`. If `state.json` became unreadable that way, the client offers a one-step ownership repair.
-
-## After an upgrade
-
-```sh
-brew upgrade teaway
-teaway
-```
-
-If passwordless controls were registered, the client offers to repair them when the helper no longer matches. It will not replace a root-owned helper silently.
+After `brew upgrade teaway`, open the client. If the helper is stale, it offers repair.
 
 ## Scripts
 
-The client is a presentation layer over the same services. For non-interactive use:
-
 | Command | Effect |
 | --- | --- |
-| `teaway on` | Disable sleep and remember the previous setting |
-| `teaway off` | Restore only the setting teaway owns |
-| `teaway status` | Read awake mode, power source, and shutdown state |
-| `teaway shutdown after 2h` | Schedule one shutdown (`m`, `h`, `d`; 10 minutes–7 days) |
-| `teaway shutdown status` | Show or clear a stale teaway shutdown record |
-| `teaway shutdown cancel` | Cancel only the teaway-owned event |
-| `teaway auth status` | Show ordinary sudo vs registered helper |
+| `teaway on` | Keep this Mac awake |
+| `teaway off` | Restore the sleep setting teaway owns |
+| `teaway status` | Print awake, power, and shutdown state |
+| `teaway shutdown after 2h` | One shutdown (`m` / `h` / `d`, 10 minutes–7 days) |
+| `teaway shutdown cancel` | Cancel only that event |
 | `teaway auth register` | Install the narrow passwordless helper |
-| `teaway auth unregister` | Remove the helper |
+| `teaway auth unregister` | Remove it |
 | `teaway version` | Print the version |
 
-`status`, `auth status`, and `version` never request a password.
-
-`teaway tui` and `teaway interactive` still open the client. They are hidden deprecated aliases.
-
-## If something looks wrong
-
-Trust the named state the client or `teaway status` prints. Do not delete teaway state files; `off` and `shutdown cancel` need them.
-
-- Sleep already disabled outside teaway: teaway will not take it over. Inspect with `/usr/bin/pmset -g` and resolve ownership there.
-- An interrupted change: follow the recovery action the client names.
-- Do not run `pmset cancelall`. That removes unrelated Apple schedules.
-
-A leftover `tea-away:` shutdown from the retired personal script can still be cancelled with `teaway shutdown cancel`. teaway does not import that script's files.
+`teaway status` and `teaway auth status` never ask for a password.

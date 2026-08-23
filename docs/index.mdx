@@ -1,31 +1,22 @@
 ---
 title: "Keep a Mac awake, then restore it"
 sidebarTitle: "Home"
-description: "teaway keeps a Mac available for headless and server use, then restores the exact sleep setting it owned."
+description: "A small macOS client that keeps a Mac awake and restores the sleep setting it owned."
 ---
 
-`teaway` is the reversible power-control layer for a spare MacBook, a Mac mini home server, or a long job that must survive the end of a session. It manages sleep and one delayed shutdown. Remote access, networking, and the workload stay yours.
-
-## Install and open the client
+<Frame>
+  <img src="/images/client.png" alt="The teaway client" />
+</Frame>
 
 ```sh
 brew install soundadam/tap/teaway
 teaway
 ```
 
-No argument opens the client. It stays open so you can keep the Mac awake, allow sleep again, schedule or cancel a shutdown, and set up passwordless controls when a privileged action needs them.
+That's the client. It stays open.
 
-Homebrew builds `teaway` from the GitHub source tag. Public releases do not ship an unnotarized prebuilt executable. Homebrew installs only `teaway`; the shorter `tea` name belongs to another package.
+<Frame>
+  <img src="/images/shutdown.png" alt="Schedule a shutdown" />
+</Frame>
 
-## What it does not do
-
-`teaway` does not configure Remote Login, Screen Sharing, VPNs, firewalls, launchd, backups, or the workload. Confirm those independently before you close a lid or walk away.
-
-<CardGroup cols={2}>
-  <Card title="Using teaway" icon="terminal" href="/using">
-    The client is the operator manual. Scripts use the same actions as commands.
-  </Card>
-  <Card title="Safety" icon="triangle-exclamation" href="/safety">
-    Closed-lid thermals, power, and the rest of the availability stack.
-  </Card>
-</CardGroup>
+macOS 13 or later. [Using teaway](/using) has the script commands. [Safety](/safety) before you close a lid.

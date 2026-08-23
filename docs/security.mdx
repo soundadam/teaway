@@ -1,39 +1,29 @@
 ---
 title: "Security"
-description: "Trust boundary, narrow helper, supply chain, and how to report a vulnerability."
+description: "What teaway can do on your Mac, and how to report a problem."
 ---
 
-`teaway` changes macOS power behavior only after an explicit command. It has no network listener, cloud service, telemetry, workload inspection, password cache, setuid executable, or always-running daemon.
+teaway never reads your password. When macOS asks, that prompt belongs to macOS.
 
-It **never reads, stores, logs, or pipes an administrator password**. When macOS presents an authentication dialog, that exchange belongs to macOS. Privileged operations use fixed system paths (`/usr/bin/pmset`), never an arbitrary shell.
+There is no daemon, listener, account, or telemetry. Privileged work is a fixed `/usr/bin/pmset` call.
 
-Read-only commands — `teaway status` and `teaway version` — do not modify power settings or scheduled events.
+## Passwordless helper
 
-## Ownership
-
-`on` snapshots the current sleep setting, applies `disablesleep=1`, and reports success only after verification. `off` restores only that owned snapshot. A live `disablesleep=1` value with no teaway record is left alone.
-
-Shutdown scheduling is independent of awake mode. Durations are bounded (10 minutes to 7 days). Cancellation removes only the exact teaway-owned event — never `pmset cancelall`.
-
-## Registered helper
-
-`teaway auth register` (also offered by the client) installs two root-owned, per-user files after one visible administrator authorization:
+The client can install a root-owned helper for this account only:
 
 - `/Library/PrivilegedHelperTools/com.soundadam.teaway.helper.<uid>`
 - `/etc/sudoers.d/soundadam-teaway-<uid>`
 
-The rule permits only `disablesleep` `0`/`1`, one canonical shutdown schedule, exact cancellation of a matching event, and helper version inspection. It does not permit the public CLI, a shell, or arbitrary `pmset` arguments.
+That rule covers `disablesleep` `0`/`1`, one teaway shutdown, and cancelling that event. Not a shell. Not arbitrary `pmset`.
 
 <Warning>
-  The sudoers rule trusts the entire macOS user account. Any process running as that user can invoke the allowlisted operations. Do not register the helper on a shared or untrusted account.
+  Any process running as your user can then perform those operations. Skip this on a shared account.
 </Warning>
 
-A version mismatch between the helper and the current binary fails closed. The client offers repair; it will not replace a root-owned helper during `brew upgrade`.
+`brew upgrade` does not silently replace the helper. The client offers repair when versions diverge.
 
-## Supply chain
+Homebrew builds from the GitHub source tag.
 
-The repository, Homebrew token, Go module, and executable are all `teaway`. Homebrew verifies the source-archive SHA-256 and builds on the machine. Public releases do not ship unnotarized prebuilt executables.
+## Report a vulnerability
 
-## Vulnerability reporting
-
-Do **not** file a public GitHub issue for a suspected vulnerability. Use GitHub's **Report a vulnerability** form in the repository Security tab. Full instructions are in [SECURITY.md](https://github.com/soundadam/teaway/blob/main/SECURITY.md).
+Use GitHub's **Report a vulnerability** form. Don't file a public issue. Details: [SECURITY.md](https://github.com/soundadam/teaway/blob/main/SECURITY.md).

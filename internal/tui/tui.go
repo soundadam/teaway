@@ -34,16 +34,7 @@ func Run(application app.App) error {
 		}
 
 		action := ""
-		form := huh.NewForm(
-			huh.NewGroup(
-				huh.NewNote().
-					Title("Teaway").
-					Description(statusDescription(powerStatus, shutdownStatus, authStatus, application.TimeZone)),
-				huh.NewSelect[string]().
-					Options(menuOptions(shutdownStatus.Record != nil, authStatus)...).
-					Value(&action),
-			),
-		)
+		form := newMenuForm(powerStatus, shutdownStatus, authStatus, application.TimeZone, &action)
 		if err := runForm(application, form); err != nil {
 			return ignoreAbort(err)
 		}
@@ -100,6 +91,19 @@ func Run(application app.App) error {
 			}
 		}
 	}
+}
+
+func newMenuForm(powerStatus power.Status, shutdownStatus shutdown.Status, auth privilege.AuthStatus, loc *time.Location, action *string) *huh.Form {
+	return huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().
+				Title("Teaway").
+				Description(statusDescription(powerStatus, shutdownStatus, auth, loc)),
+			huh.NewSelect[string]().
+				Options(menuOptions(shutdownStatus.Record != nil, auth)...).
+				Value(action),
+		),
+	)
 }
 
 func menuOptions(hasShutdown bool, auth privilege.AuthStatus) []huh.Option[string] {
