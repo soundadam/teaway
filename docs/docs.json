@@ -1,0 +1,80 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "aspen",
+  "name": "teaway",
+  "colors": {
+    "primary": "#1A1A2E",
+    "light": "#E8EAF6",
+    "dark": "#0D0D1A"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "index",
+              "introduction",
+              "installation",
+              "quickstart",
+              "development"
+            ]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "commands/overview",
+              "commands/on-off",
+              "commands/status",
+              "commands/shutdown",
+              "commands/auth"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/mac-server-setup",
+              "guides/authorization",
+              "guides/upgrade",
+              "guides/recovery"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/security",
+              "reference/safety",
+              "reference/migration",
+              "reference/changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Product",
+        "href": "https://soundadam.com/projects/teaway/"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/soundadam/teaway"
+    }
+  },
+  "footer": {
+    "socials": {
+      "website": "https://soundadam.com/projects/teaway/",
+      "github": "https://github.com/soundadam/teaway"
+    }
+  }
+}

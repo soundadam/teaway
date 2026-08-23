@@ -12,6 +12,7 @@ All notable changes to `teaway` are documented here.
 
 ### Changed
 
+- Published operator docs from `docs/` to [teaway.mintlify.app](https://teaway.mintlify.app).
 - Made the TUI a session client: it stays open after an action, drops the
   Refresh command, and shows only the status lines that currently matter.
 - Deprecated `teaway tui` and `teaway interactive`; no-argument `teaway` is

@@ -1,0 +1,15 @@
+# Mintlify automatically ignores these files and directories:
+# .git, .github, .claude, .agents, .idea, node_modules,
+# README.md, LICENSE.md, CHANGELOG.md, CONTRIBUTING.md
+
+# In-repo Markdown kept for GitHub; the public site uses the MDX tree.
+operations.md
+authorization.md
+security.md
+migration.md
+product-design.md
+release-readiness.md
+
+# Draft content
+drafts/
+*.draft.mdx

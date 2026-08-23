@@ -1,3 +1,8 @@
+---
+title: "Migration"
+description: "Handoff from a retired personal tea or tea-away shell script."
+---
+
 # Migration from a personal tea or tea-away script
 
 This document applies only to machines that previously used the retired

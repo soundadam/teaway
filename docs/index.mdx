@@ -1,0 +1,82 @@
+---
+title: "teaway: Keep Your Mac Awake for Server and Headless Use"
+sidebarTitle: "Home"
+description: "teaway is a focused macOS CLI tool that keeps your Mac awake for headless and server use, then reversibly restores the exact sleep setting it owned."
+---
+
+teaway gives your Mac a clear, reversible power contract: enable awake mode before walking away, and restore the exact sleep setting when you're done. Whether you're running a spare MacBook as a build box, a Mac mini as a home server, or a homelab node through a long backup job, teaway handles the power lifecycle — nothing more, nothing less.
+
+<CardGroup cols={2}>
+  <Card
+    title="Introduction"
+    icon="book-open"
+    href="/introduction"
+  >
+    Learn what teaway does, who it's for, and how it differs from other approaches to keeping a Mac awake.
+  </Card>
+  <Card
+    title="Quick Start"
+    icon="bolt"
+    href="/quickstart"
+  >
+    Install teaway, register the helper, enable awake mode, and restore your original sleep setting in minutes.
+  </Card>
+  <Card
+    title="Commands Overview"
+    icon="terminal"
+    href="/commands/overview"
+  >
+    Explore every teaway command — from power control and shutdown scheduling to authorization management.
+  </Card>
+  <Card
+    title="Mac Server Setup"
+    icon="server"
+    href="/guides/mac-server-setup"
+  >
+    Follow a complete guide to running a Mac as an always-on server using teaway alongside the rest of your availability stack.
+  </Card>
+</CardGroup>
+
+## Get up and running
+
+<Steps>
+  <Step title="Install teaway">
+    Install teaway through Homebrew using the `soundadam/tap` tap. No additional tools or accounts are required.
+
+    ```sh
+    brew install soundadam/tap/teaway
+    teaway version
+    ```
+  </Step>
+  <Step title="Inspect your baseline">
+    Check authorization and power state before making any changes. This gives you a clear picture of what teaway will own.
+
+    ```sh
+    teaway auth status
+    teaway status
+    ```
+  </Step>
+  <Step title="Register the narrow helper (recommended)">
+    For a trusted single-user account, register the helper once to avoid repeated password prompts on every privileged operation.
+
+    ```sh
+    teaway auth register
+    ```
+  </Step>
+  <Step title="Enable awake mode">
+    Verify remote access is working from a second device, then enable awake mode and confirm ownership.
+
+    ```sh
+    teaway on
+    teaway status
+    ```
+  </Step>
+  <Step title="Restore when done">
+    When you no longer need awake mode, restore the exact sleep setting teaway snapshotted before it ran.
+
+    ```sh
+    teaway off
+    teaway status
+    ```
+  </Step>
+</Steps>

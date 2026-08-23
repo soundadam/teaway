@@ -1,3 +1,8 @@
+---
+title: "Operations"
+description: "Checklist, daily use, recovery, and availability limits for a Mac used as a small always-on server."
+---
+
 # Running a Mac as an always-on server
 
 `teaway` supplies the reversible power-control layer for a headless Mac,

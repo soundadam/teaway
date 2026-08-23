@@ -1,3 +1,8 @@
+---
+title: "Authorization"
+description: "Ordinary sudo and the optional narrow per-user helper."
+---
+
 # Authorization model
 
 ## Goals

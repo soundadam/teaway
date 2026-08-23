@@ -1,5 +1,6 @@
 /dist/
 /.build/
+/.mintlify/
 /teaway
 /bin/
 /tests/test-tea.zsh

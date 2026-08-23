@@ -1,3 +1,9 @@
+---
+title: "Release readiness"
+description: "Evidence and procedure for a teaway source-tag release."
+hidden: true
+---
+
 # Release readiness
 
 ## Release target

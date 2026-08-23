@@ -1,17 +1,17 @@
 # Documentation
 
-`teaway` is designed around one operational goal: keep a Mac available as a
-small, long-running server without losing control of the power state it changes.
+Public site: [teaway.mintlify.app](https://teaway.mintlify.app).
 
-- [Operations](operations.md): deployment checklist, daily workflow, recovery,
-  maintenance, and availability limits.
-- [Authorization](authorization.md): ordinary sudo and the optional narrow
-  registered helper.
-- [Security](security.md): trust boundaries, state ownership, shutdown safety,
-  and supply-chain policy.
-- [Product design](product-design.md): positioning, user journeys, guarantees,
-  non-goals, and future scope.
-- [Migration](migration.md): handoff from the retired personal shell version.
-- [Release readiness](release-readiness.md): evidence and release procedure.
+Mintlify reads `docs.json` and the `.mdx` pages in this directory. The GitHub
+app should point at `soundadam/teaway` with content directory `docs`.
 
-Project-wide history is maintained in [`CHANGELOG.md`](../CHANGELOG.md).
+GitHub-oriented notes (not on the public sidebar):
+
+- [Operations](operations.md)
+- [Authorization](authorization.md)
+- [Security](security.md)
+- [Migration](migration.md)
+- [Product design](product-design.md)
+- [Release readiness](release-readiness.md)
+
+Project-wide history is [`CHANGELOG.md`](../CHANGELOG.md).

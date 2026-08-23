@@ -1,0 +1,75 @@
+---
+title: "teaway on / off: Reversible macOS Sleep Management"
+sidebarTitle: "on / off"
+description: "Enable closed-lid awake mode with a reversible ownership record, then restore the exact pre-teaway sleep setting when your workload is done."
+---
+
+`teaway on` and `teaway off` are the two core commands that make teaway's power management reversible. Rather than overwriting system sleep settings and walking away, teaway snapshots the value it found, records that it owns the change, and later restores exactly that value — no broader policy is ever touched.
+
+## teaway on
+
+`teaway on` performs a small, atomic transaction:
+
+1. **Inspect** — read the current macOS `disablesleep` value.
+2. **Persist** — save the exact pre-change value in private state before touching anything.
+3. **Apply** — set `disablesleep=1` through a fixed privileged operation.
+4. **Verify** — re-read the live macOS state and confirm the value matches what was requested.
+5. **Record** — update the private ownership record to the enabled phase, completing the transaction.
+
+```bash
+teaway on
+```
+
+Example output:
+
+```text
+✓ Awake mode is on. This Mac will stay awake until you run `teaway off`.
+  Previous setting saved: disablesleep=0
+  Keep this Mac powered and well ventilated.
+```
+
+<Note>
+`teaway on` is idempotent. Running it when teaway already owns the awake state is safe — it records the observation and returns without performing a redundant privileged write. You can call it from scripts or restart sequences without risk of double-application.
+</Note>
+
+### Battery and AC power
+
+teaway treats battery and AC power identically. `teaway on` works the same whether the Mac is plugged in or running on battery. The `status` command always reports the current power source as information, but the source does not gate or change the `on` behavior.
+
+Before closing a laptop lid, confirm the machine is stationary, on a hard open surface with adequate ventilation, and reachable through your configured remote-access method. Running on AC power remains advisable for extended unattended sessions because a battery will drain, but the command itself imposes no AC requirement.
+
+## teaway off
+
+`teaway off` reverses the transaction recorded by `teaway on`. It reads the private ownership record, retrieves the value that was present before `on` ran, and restores exactly that value.
+
+```bash
+teaway off
+```
+
+Example output:
+
+```text
+✓ Awake mode is off. The previous sleep setting was restored.
+  Current setting: disablesleep=0
+```
+
+<Warning>
+If teaway has no ownership record — because `teaway on` was never run, or the record was already consumed — `teaway off` is a deliberate no-op. It will not clear a `disablesleep=1` value that was set by another tool, an administrator, or a system policy. This is intentional: teaway refuses to silently undo external configuration it did not create.
+</Warning>
+
+### The ownership model
+
+The ownership model exists to prevent teaway from interfering with other tools or system policies. If your Mac already has `disablesleep=1` set by a management profile or a different utility, running `teaway off` will not touch that setting. Only the value recorded by `teaway on` is eligible for restoration.
+
+This means the sequence is always safe in a shared or managed environment:
+
+- If teaway owns the setting → `off` restores the original value.
+- If teaway does not own the setting → `off` exits cleanly with no change.
+
+### Shutdown scheduling is independent
+
+`teaway off` never silently cancels a scheduled shutdown. If you have a `teaway shutdown after` event pending, it remains active after `off`. Manage shutdown events separately with `teaway shutdown cancel`. See the [Shutdown reference](/commands/shutdown) for details.
+
+## Authorization
+
+Both `teaway on` and `teaway off` require administrator privileges to write to `pmset`. Without the registered helper, teaway uses ordinary `sudo` and preserves the system credential cache. With `teaway auth register` completed, mutations run without a password prompt. See the [Auth reference](/commands/auth) for setup instructions.

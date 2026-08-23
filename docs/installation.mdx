@@ -1,0 +1,67 @@
+---
+title: "Install teaway on macOS via Homebrew: Setup and Upgrade"
+sidebarTitle: "Installation"
+description: "Install teaway via Homebrew on macOS 13 Ventura or later, verify the binary, understand the tea name conflict, and upgrade safely after releases."
+---
+
+teaway is distributed through Homebrew using the `soundadam/tap` tap. The formula builds the `teaway` binary directly from the immutable GitHub source tag, so you get a clean, reproducible build every time without running an unnotarized prebuilt executable.
+
+## Requirements
+
+<Info>
+  teaway requires **macOS 13 Ventura or later** on Apple Silicon or an Intel Mac supported by that macOS release. You need administrator authorization for power mutations and helper registration.
+</Info>
+
+## Install
+
+Run the following command in your terminal:
+
+```sh
+brew install soundadam/tap/teaway
+```
+
+Homebrew taps the `soundadam/tap` repository, fetches the formula, builds teaway from source, and places the `teaway` binary on your `PATH`.
+
+## Verify the installation
+
+Confirm that teaway is installed and check the version:
+
+```sh
+teaway version
+```
+
+You should see the current release version printed to stdout. If the command is not found, make sure Homebrew's `bin` directory is on your `PATH` and try opening a new terminal session.
+
+## A note on the `tea` command name
+
+<Note>
+  Homebrew installs only `teaway`. The shorter name `tea` belongs to a separate Homebrew package (the Gitea CLI) and is not created by teaway. If you want a shorter alias for personal use, add one to your shell configuration — for example `alias tea=teaway` in your `.zshrc` — but teaway itself will never create or modify that alias.
+</Note>
+
+## Upgrade
+
+To upgrade teaway to the latest release, run:
+
+```sh
+brew update && brew upgrade teaway
+```
+
+After upgrading, check the installed version and your authorization status:
+
+```sh
+teaway version
+teaway auth status
+```
+
+If you previously registered the narrow helper (via `teaway auth register`) and `auth status` reports a helper version mismatch, re-run registration with one visible administrator authorization:
+
+```sh
+teaway auth register
+teaway auth status
+```
+
+Upgrading does not silently replace the root-owned helper. This is intentional: the machine-level trust decision stays visible and explicit.
+
+## Source builds
+
+Public releases do not ship an unnotarized prebuilt executable. Homebrew builds teaway from source on your machine using the immutable source tag tied to each release. If you want to work on the source tree directly, see the [Contributing guide](https://github.com/soundadam/teaway/blob/main/CONTRIBUTING.md) in the teaway repository.

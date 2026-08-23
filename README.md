@@ -162,11 +162,16 @@ Homebrew package and may be used only as a personal shell alias or shim.
 
 ## Documentation
 
+Published docs: [teaway.mintlify.app](https://teaway.mintlify.app).
+The source is [`docs/`](docs/README.md).
+
+- [Start](docs/index.mdx)
 - [Operating a Mac as an always-on server](docs/operations.md)
 - [Authorization model](docs/authorization.md)
 - [Security model](docs/security.md)
-- [Product design and boundaries](docs/product-design.md)
 - [Migration from an older personal script](docs/migration.md)
+- [Development](docs/development.mdx)
+- [Product design and boundaries](docs/product-design.md)
 - [Release readiness](docs/release-readiness.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)

@@ -32,6 +32,10 @@ Include tests for normal behavior, idempotence, partial failure, conflict, and
 recovery. Update README, operations, authorization, security, product design,
 and changelog material when the public contract changes.
 
+Documentation for operators is generated from `docs/` (Mintlify). Preview with
+`mint dev` in that directory after CLI access is available. Do not commit
+dashboard tokens or DNS records.
+
 Before opening a pull request:
 
 ```sh

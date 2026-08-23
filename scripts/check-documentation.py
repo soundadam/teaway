@@ -11,7 +11,8 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parent.parent
 MARKDOWN_FILES = sorted(
     path
-    for path in ROOT.rglob("*.md")
+    for pattern in ("*.md", "*.mdx")
+    for path in ROOT.rglob(pattern)
     if ".build" not in path.parts and ".git" not in path.parts
 )
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
@@ -24,7 +25,7 @@ def check_local_links() -> list[str]:
         text = document.read_text(encoding="utf-8")
         for raw_target in LINK_PATTERN.findall(text):
             target = raw_target.strip().split()[0].strip("<>")
-            if target.startswith(("http://", "https://", "mailto:", "#")):
+            if target.startswith(("http://", "https://", "mailto:", "#", "/")):
                 continue
             path_text = unquote(target.split("#", 1)[0].split("?", 1)[0])
             if not path_text:
@@ -66,7 +67,7 @@ def main() -> int:
             print(f"documentation check: {error}", file=sys.stderr)
         return 1
     print(
-        f"documentation check passed: {len(MARKDOWN_FILES)} Markdown files; "
+        f"documentation check passed: {len(MARKDOWN_FILES)} Markdown/MDX files; "
         "local links and release version are consistent"
     )
     return 0

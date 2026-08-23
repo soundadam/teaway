@@ -1,3 +1,8 @@
+---
+title: "Security"
+description: "Trust boundary, state ownership, shutdown safety, and supply chain."
+---
+
 # Security model
 
 ## Trust boundary

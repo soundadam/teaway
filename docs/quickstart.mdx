@@ -1,0 +1,122 @@
+---
+title: "Quick Start: Install teaway and Enable Mac Awake Mode"
+sidebarTitle: "Quick Start"
+description: "Install teaway, register the narrow helper, enable awake mode on your Mac, and restore your original sleep setting with a single command."
+---
+
+This guide walks you through everything you need to put your Mac into awake mode and bring it back cleanly. By the end you will have teaway installed, the optional narrow helper registered, awake mode enabled and verified, and a clear path back to your original sleep state.
+
+<Steps>
+  <Step title="Install teaway">
+    Install teaway through Homebrew using the `soundadam/tap` tap. The formula builds from source, so no unnotarized binary is involved.
+
+    ```sh
+    brew install soundadam/tap/teaway
+    ```
+
+    Confirm the install succeeded:
+
+    ```sh
+    teaway version
+    ```
+
+    You should see the current release version printed to your terminal.
+  </Step>
+
+  <Step title="Check your baseline">
+    Before making any changes, inspect your authorization state and current power configuration. This gives you an accurate picture of what teaway will snapshot and own.
+
+    ```sh
+    teaway auth status
+    teaway status
+    ```
+
+    `auth status` tells you whether ordinary sudo or registered passwordless controls are in place. `status` reports the current power source, the live `disablesleep` value, ownership state, and any scheduled shutdown.
+  </Step>
+
+  <Step title="Register the narrow helper (recommended)">
+    For a trusted single-user account, register the narrow helper once. This installs a root-owned per-user helper and a sudoers rule that permits only the exact operations teaway needs — no shell, no arbitrary `pmset` arguments, no broader privilege.
+
+    ```sh
+    teaway auth register
+    ```
+
+    teaway will explain that the one-time macOS password entry is hidden before invoking `sudo`. It never reads or stores that password. After registration, verify the result:
+
+    ```sh
+    teaway auth status
+    ```
+
+    <Note>
+      Registration is a per-account trust decision and is recommended for trusted single-user accounts. Shared or multi-user accounts should remain in ordinary sudo mode and skip this step.
+    </Note>
+  </Step>
+
+  <Step title="Enable awake mode">
+    Enable awake mode. teaway will snapshot the current sleep state, apply `disablesleep=1`, verify the change, and record ownership.
+
+    ```sh
+    teaway on
+    ```
+
+    Confirm the result:
+
+    ```sh
+    teaway status
+    ```
+
+    A healthy result shows `Awake mode: On — managed by teaway` and `disablesleep=1`. The current power source (battery or AC) is reported for your information but does not block the command.
+
+    <Tip>
+      `teaway on` is idempotent. Running it again when awake mode is already enabled does not create a second ownership record or overwrite the saved baseline.
+    </Tip>
+  </Step>
+
+  <Step title="Verify remote access before closing the lid">
+    Before closing a MacBook lid or walking away from the machine, verify that your chosen remote access method — SSH, Screen Sharing, or another configured tool — is reachable from a second device.
+
+    <Warning>
+      Make sure the Mac is stationary, on a hard open surface, and well ventilated before closing the lid. Never run a closed-lid MacBook inside a bag, drawer, or other confined space. teaway does not override thermal protection. Remaining on AC power is strongly recommended for unattended use so the battery cannot silently drain.
+    </Warning>
+
+    teaway does not configure Remote Login, Screen Sharing, VPNs, firewalls, or network settings. Confirm those are working independently before you rely on the Mac remotely.
+  </Step>
+
+  <Step title="Restore your original sleep setting when done">
+    When you no longer need awake mode, restore the exact sleep state teaway snapshotted:
+
+    ```sh
+    teaway off
+    ```
+
+    Verify the result:
+
+    ```sh
+    teaway status
+    ```
+
+    `teaway off` reads the ownership record and restores only the value it saved. If no record exists — for example if another tool owns `disablesleep` — it does nothing and will not silently undo external policy.
+  </Step>
+</Steps>
+
+## Command reference
+
+The table below lists every teaway command and its effect for quick reference.
+
+| Command | Effect |
+|---|---|
+| `teaway` | Open the guided client menu |
+| `teaway status` | Read power source, observed sleep state, ownership, and shutdown state |
+| `teaway on` | Snapshot the current state, disable sleep, verify, and record ownership |
+| `teaway off` | Restore only the exact state owned by teaway |
+| `teaway shutdown after 30m` | Schedule one shutdown after an explicit duration |
+| `teaway shutdown status` | Reconcile the private record with macOS scheduled power events |
+| `teaway shutdown cancel` | Cancel only the exact teaway-owned shutdown |
+| `teaway auth status` | Inspect ordinary/registered authorization and sudo Touch ID configuration |
+| `teaway auth register` | Set up narrow passwordless controls after one visible administrator check |
+| `teaway auth unregister` | Remove the helper and its sudoers rule |
+| `teaway version` | Print the installed version |
+
+<Note>
+  Shutdown durations accept `m`, `h`, and `d` units. Delayed shutdowns are bounded between 10 minutes and 7 days. Only one teaway-owned shutdown may exist at a time.
+</Note>

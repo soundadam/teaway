@@ -1,3 +1,9 @@
+---
+title: "Product design"
+description: "Positioning, journeys, guarantees, non-goals, and deferred scope."
+hidden: true
+---
+
 # teaway product design
 
 ## Positioning
