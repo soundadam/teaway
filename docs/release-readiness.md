@@ -16,7 +16,7 @@ source. No unnotarized prebuilt binary is published.
 - Operations, authorization, security, migration, product-design, contributing,
   and security-reporting documents are linked from the repository front page.
 - Repository description and topics cover macOS, headless operation, homelab,
-  self-hosting, sleep prevention, Swift, and Homebrew without claiming network
+  self-hosting, sleep prevention, Go, and Homebrew without claiming network
   or workload features.
 - Version strings, changelog, release notes, tag, and Formula all equal 0.4.2.
 
@@ -35,7 +35,7 @@ source. No unnotarized prebuilt binary is published.
 
 ### Validation
 
-- All Swift tests pass on the release source tree.
+- All Go tests pass on the release source tree.
 - A release build reports `teaway 0.4.2`.
 - The hidden helper rejects non-root direct execution.
 - GitHub Actions passes for both push and pull-request events on a hosted macOS

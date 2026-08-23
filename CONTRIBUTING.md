@@ -5,14 +5,14 @@ power control, exact shutdown ownership, and no hidden control plane.
 
 ## Development setup
 
-Requirements are macOS 13 or later and Swift 5.9 / Xcode 15 or later.
+Requirements are macOS 13 or later and Go 1.24 or later.
 
 ```sh
 git clone https://github.com/soundadam/teaway.git
 cd teaway
-swift package dump-package >/dev/null
-swift test
-swift build -c release --product teaway
+go test ./...
+go build -o teaway .
+./teaway version
 ```
 
 ## Safety rules
@@ -36,9 +36,9 @@ Before opening a pull request:
 
 ```sh
 git diff --check
-swift test
-swift build -c release --product teaway
-.build/release/teaway version
+go test ./...
+go build -o teaway .
+./teaway version
 ```
 
 Hardware acceptance must be deliberate, reversible, and end with

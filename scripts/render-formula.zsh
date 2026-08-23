@@ -8,7 +8,7 @@ SHA256="${3:-}"
 LICENSE="${4:-}"
 OUTPUT="${5:-$ROOT/packaging/Formula/teaway.rb}"
 TEMPLATE="$ROOT/packaging/Formula/teaway.rb.in"
-VERSION_SOURCE="$ROOT/Sources/TeaAwayCore/Models.swift"
+VERSION_SOURCE="$ROOT/internal/version/version.go"
 
 if [[ ! "$REPOSITORY" =~ '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' ]]; then
     print -u2 "usage: $0 OWNER/REPOSITORY VERSION SHA256 SPDX-LICENSE [OUTPUT]"
@@ -18,7 +18,7 @@ if [[ ! "$VERSION" =~ '^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$' ]]; then
     print -u2 "teaway: invalid version: $VERSION"
     exit 2
 fi
-source_version=$(/usr/bin/awk -F\" '/public static let current = / {print $2}' "$VERSION_SOURCE")
+source_version=$(/usr/bin/awk -F\" '/^const Current = / {print $2}' "$VERSION_SOURCE")
 if [[ -z "$source_version" || "$VERSION" != "$source_version" ]]; then
     print -u2 "teaway: Formula version $VERSION does not match source version ${source_version:-unknown}"
     exit 2

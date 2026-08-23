@@ -32,8 +32,9 @@ case "$arch" in
         ;;
 esac
 
-/usr/bin/swift test --package-path "$ROOT"
-/usr/bin/swift build --package-path "$ROOT" -c release --product "$PRODUCT"
+/usr/bin/mkdir -p "$ROOT/.build/release"
+( cd "$ROOT" && /usr/bin/go test ./... )
+( cd "$ROOT" && /usr/bin/go build -o "$ROOT/.build/release/$PRODUCT" . )
 
 built_version=$("$ROOT/.build/release/$PRODUCT" version)
 if [[ "$built_version" != "$PRODUCT $VERSION" ]]; then

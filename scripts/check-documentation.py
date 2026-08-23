@@ -15,7 +15,7 @@ MARKDOWN_FILES = sorted(
     if ".build" not in path.parts and ".git" not in path.parts
 )
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
-VERSION_PATTERN = re.compile(r'public static let current = "([^"]+)"')
+VERSION_PATTERN = re.compile(r'const Current = "([^"]+)"')
 
 
 def check_local_links() -> list[str]:
@@ -39,10 +39,10 @@ def check_local_links() -> list[str]:
 
 def check_release_version() -> list[str]:
     errors: list[str] = []
-    models = (ROOT / "Sources/TeaAwayCore/Models.swift").read_text(encoding="utf-8")
-    match = VERSION_PATTERN.search(models)
+    version_file = ROOT / "internal/version/version.go"
+    match = VERSION_PATTERN.search(version_file.read_text(encoding="utf-8"))
     if match is None:
-        return ["Sources/TeaAwayCore/Models.swift: release version not found"]
+        return ["internal/version/version.go: release version not found"]
 
     version = match.group(1)
     if version.endswith("-dev"):
@@ -52,11 +52,9 @@ def check_release_version() -> list[str]:
     if f"## [{version}]" not in changelog:
         errors.append(f"CHANGELOG.md: missing release heading for {version}")
 
-    application_tests = (
-        ROOT / "tests/TeaAwayCoreTests/ApplicationTests.swift"
-    ).read_text(encoding="utf-8")
-    if f'teaway {version}' not in application_tests:
-        errors.append(f"ApplicationTests.swift: missing exact version assertion for {version}")
+    root_test = (ROOT / "cmd/root_test.go").read_text(encoding="utf-8")
+    if "version.Current" not in root_test:
+        errors.append("cmd/root_test.go: missing version.Current assertion")
 
     return errors
 
