@@ -76,8 +76,8 @@ func askCustomDuration(application app.App) (string, error) {
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
-				Title("Custom delay").
-				Description("Examples: 45m, 3h, 2d. Between 10 minutes and 7 days.").
+				Title("Custom").
+				Description("10m – 7d").
 				Placeholder("90m").
 				Value(&value).
 				Validate(func(in string) error {
@@ -101,11 +101,11 @@ func (m durationPicker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "left", "h", "backspace":
+		case "left", "h", "down", "j", "backspace":
 			if m.index > 0 {
 				m.index--
 			}
-		case "right", "l":
+		case "right", "l", "up", "k":
 			if m.index < len(shutdownSteps)-1 {
 				m.index++
 			}
@@ -132,25 +132,41 @@ func (m durationPicker) View() string {
 	seconds, _ := duration.ParseShutdown(step)
 	at := m.now.Add(time.Duration(seconds) * time.Second).In(m.loc)
 
-	title := titleStyle.Render("Schedule a shutdown")
-	pill := pillStyle.Render(humanDuration(step))
-	around := faintStyle.Render("around " + at.Format("Mon 15:04 · 2006-01-02"))
+	title := titleStyle.Render("Shutdown")
+	value := valueStyle.Render(humanDuration(step))
+	when := faintStyle.Render(at.Format("Mon 15:04"))
 	trackWidth := m.trackWidth()
-	labels := placeTickLabels(trackWidth)
+	labels := faintStyle.Render(placeTickLabels(trackWidth))
 	track := knobStyle.Render(renderTrack(m.index, trackWidth))
-	help := faintStyle.Render("← → step    c custom    enter schedule    esc back")
+	help := pickerHelp(m.index)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		title,
 		"",
-		"  "+pill,
-		"  "+around,
+		"  "+value,
+		"  "+when,
 		"",
 		"  "+labels,
 		"  "+track,
 		"",
-		"  "+help,
+		"  "+help[0],
+		"  "+help[1],
 	)
+}
+
+func pickerHelp(index int) [2]string {
+	left := knobStyle.Render("←")
+	right := knobStyle.Render("→")
+	if index == 0 {
+		left = faintStyle.Render("←")
+	}
+	if index == len(shutdownSteps)-1 {
+		right = faintStyle.Render("→")
+	}
+	return [2]string{
+		left + "  " + right,
+		faintStyle.Render("c   enter   esc"),
+	}
 }
 
 func (m durationPicker) trackWidth() int {
@@ -158,8 +174,8 @@ func (m durationPicker) trackWidth() int {
 	if w < 24 {
 		w = 24
 	}
-	if w > 56 {
-		w = 56
+	if w > 40 {
+		w = 40
 	}
 	return w
 }
@@ -253,10 +269,9 @@ var (
 	titleStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.AdaptiveColor{Light: "#5A56E0", Dark: "#7571F9"}).
 			Bold(true)
-	pillStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.AdaptiveColor{Light: "#FFFDF5", Dark: "#FFFDF5"}).
-			Background(lipgloss.Color("#F780E2")).
-			Padding(0, 1)
+	valueStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#F780E2")).
+			Bold(true)
 	knobStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#F780E2"))
 	faintStyle = lipgloss.NewStyle().

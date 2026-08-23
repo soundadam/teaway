@@ -44,6 +44,15 @@ func TestDurationPickerKeys(t *testing.T) {
 		t.Fatalf("left: index %d want %d", m.index, start)
 	}
 
+	m = mustPicker(t, m, tea.KeyMsg{Type: tea.KeyDown})
+	if m.index != start-1 {
+		t.Fatalf("down: index %d want %d", m.index, start-1)
+	}
+	m = mustPicker(t, m, tea.KeyMsg{Type: tea.KeyUp})
+	if m.index != start {
+		t.Fatalf("up: index %d want %d", m.index, start)
+	}
+
 	m = mustPicker(t, m, tea.KeyMsg{Type: tea.KeyHome})
 	if m.index != 0 {
 		t.Fatalf("home: index %d", m.index)
@@ -84,7 +93,7 @@ func TestDurationPickerView(t *testing.T) {
 		width: 80,
 	}
 	view := m.View()
-	for _, want := range []string{"2 hours", "●", "10m", "7d", "around Sun 18:00"} {
+	for _, want := range []string{"2 hours", "●", "10m", "7d", "Sun 18:00"} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("missing %q in:\n%s", want, view)
 		}

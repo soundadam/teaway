@@ -20,16 +20,10 @@ func TestStatusDescriptionIsSituational(t *testing.T) {
 	idle := statusDescription(
 		power.Status{Observation: power.Off, PowerSource: "AC Power", LiveDisableSleep: 0},
 		shutdown.Status{},
-		privilege.AuthRegistered,
 		loc,
 	)
-	if !strings.Contains(idle, "Sleep is allowed") {
-		t.Fatalf("idle status should describe allowed sleep:\n%s", idle)
-	}
-	for _, leftover := range []string{"disablesleep", "Passwordless", "Not scheduled", "Awake", "Power"} {
-		if strings.Contains(idle, leftover) {
-			t.Fatalf("idle status should omit %q:\n%s", leftover, idle)
-		}
+	if idle != "Sleep allowed" {
+		t.Fatalf("idle status:\n%s", idle)
 	}
 
 	busy := statusDescription(
@@ -38,15 +32,12 @@ func TestStatusDescriptionIsSituational(t *testing.T) {
 			Observation: shutdown.Scheduled,
 			Record:      &state.ShutdownRecord{ScheduledAt: when},
 		},
-		privilege.AuthNeedsRepair,
 		loc,
 	)
 	for _, want := range []string{
-		"This Mac stays awake",
+		"Staying awake",
 		"On battery",
-		"Shutdown scheduled",
-		"2026-08-24 02:00:00 +08:00",
-		"Passwordless controls need repair",
+		"Shutdown · Mon 02:00",
 	} {
 		if !strings.Contains(busy, want) {
 			t.Fatalf("missing %q in:\n%s", want, busy)
@@ -54,6 +45,21 @@ func TestStatusDescriptionIsSituational(t *testing.T) {
 	}
 	if strings.Contains(busy, "disablesleep") {
 		t.Fatalf("TUI status should not dump native sleep keys:\n%s", busy)
+	}
+}
+
+func TestStatusLinesStayShort(t *testing.T) {
+	loc := time.FixedZone("CST", 8*3600)
+	when := time.Date(2026, 8, 24, 2, 0, 0, 0, loc)
+	text := statusDescription(
+		power.Status{Observation: power.On, PowerSource: "Battery Power"},
+		shutdown.Status{Observation: shutdown.Scheduled, Record: &state.ShutdownRecord{ScheduledAt: when}},
+		loc,
+	)
+	for _, line := range strings.Split(text, "\n") {
+		if len([]rune(line)) > 28 {
+			t.Fatalf("status line too long (%d): %q", len([]rune(line)), line)
+		}
 	}
 }
 

@@ -12,8 +12,8 @@ All notable changes to `teaway` are documented here.
 
 ### Changed
 
-- Showed the Charm client in README and public docs instead of describing the
-  menu in prose.
+- Tightened TUI copy and hid select-filter chrome so the client reads as
+  short lines instead of stacked sentences.
 - Published operator docs from `docs/` to [teaway.mintlify.app](https://teaway.mintlify.app).
 - Made the TUI a session client: it stays open after an action, drops the
   Refresh command, and shows only the status lines that currently matter.

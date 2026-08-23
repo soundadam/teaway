@@ -5,7 +5,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 
@@ -28,9 +27,9 @@ func PreviewMenu() string {
 		privilege.AuthUnregistered,
 		time.FixedZone("CST", 8*3600),
 		&action,
-	).WithTheme(huh.ThemeCharm()).WithWidth(64)
+	).WithTheme(clientTheme()).WithKeyMap(clientKeyMap()).WithShowHelp(false).WithWidth(40)
 	_ = form.Init()
-	model, _ := form.Update(tea.WindowSizeMsg{Width: 64, Height: 16})
+	model, _ := form.Update(tea.WindowSizeMsg{Width: 40, Height: 14})
 	return compactPreview(model.View())
 }
 
@@ -41,7 +40,7 @@ func PreviewShutdown() string {
 		index: defaultShutdownIndex(),
 		now:   time.Date(2026, 8, 24, 0, 36, 0, 0, loc),
 		loc:   loc,
-		width: 64,
+		width: 40,
 	}
 	return compactPreview(m.View())
 }

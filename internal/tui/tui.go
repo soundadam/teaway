@@ -12,6 +12,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/soundadam/teaway/internal/app"
 	"github.com/soundadam/teaway/internal/power"
@@ -98,7 +99,7 @@ func newMenuForm(powerStatus power.Status, shutdownStatus shutdown.Status, auth 
 		huh.NewGroup(
 			huh.NewNote().
 				Title("Teaway").
-				Description(statusDescription(powerStatus, shutdownStatus, auth, loc)),
+				Description(statusDescription(powerStatus, shutdownStatus, loc)),
 			huh.NewSelect[string]().
 				Options(menuOptions(shutdownStatus.Record != nil, auth)...).
 				Value(action),
@@ -108,18 +109,18 @@ func newMenuForm(powerStatus power.Status, shutdownStatus shutdown.Status, auth 
 
 func menuOptions(hasShutdown bool, auth privilege.AuthStatus) []huh.Option[string] {
 	opts := []huh.Option[string]{
-		huh.NewOption("Keep this Mac awake", "on"),
-		huh.NewOption("Allow sleep again", "off"),
-		huh.NewOption("Schedule a shutdown", "shutdown"),
+		huh.NewOption("Stay awake", "on"),
+		huh.NewOption("Allow sleep", "off"),
+		huh.NewOption("Shut down later", "shutdown"),
 	}
 	if hasShutdown {
-		opts = append(opts, huh.NewOption("Cancel the scheduled shutdown", "cancel"))
+		opts = append(opts, huh.NewOption("Cancel shutdown", "cancel"))
 	}
 	switch auth {
 	case privilege.AuthUnregistered:
-		opts = append(opts, huh.NewOption("Set up passwordless controls", "auth"))
+		opts = append(opts, huh.NewOption("Passwordless", "auth"))
 	case privilege.AuthNeedsRepair:
-		opts = append(opts, huh.NewOption("Repair passwordless controls", "auth"))
+		opts = append(opts, huh.NewOption("Repair helper", "auth"))
 	}
 	return append(opts, huh.NewOption("Quit", "quit"))
 }
@@ -133,16 +134,16 @@ func maybeSetupPasswordless(application app.App, auth privilege.AuthStatus) (abo
 		return false, nil
 	}
 	setup := true
-	affirmative := "Set up now"
-	description := "Set up passwordless controls now so later awake and shutdown operations won't ask? Teaway never reads the password; macOS handles the hidden prompt."
+	affirmative := "Set up"
+	description := "macOS will ask. Teaway never sees it."
 	if auth == privilege.AuthNeedsRepair {
-		affirmative = "Repair now"
-		description = "Passwordless controls need repair. Fix them now so later awake and shutdown operations won't ask? Teaway never reads the password; macOS handles the hidden prompt."
+		affirmative = "Repair"
+		description = "The helper is stale. macOS will ask once."
 	}
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewConfirm().
-				Title("This action needs an administrator password").
+				Title("Password").
 				Description(description).
 				Affirmative(affirmative).
 				Negative("Use sudo").
@@ -166,11 +167,11 @@ func repairPermission(application app.App, typed *teaerr.Error) error {
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewNote().
-				Title("Teaway cannot read its state").
-				Description(typed.Message+"\n\n"+typed.Repair),
+				Title("Can't read state").
+				Description(typed.Message),
 			huh.NewConfirm().
-				Title("Fix ownership with sudo now?").
-				Description("This runs sudo chown so state.json belongs to your account again. Do not launch teaway with sudo afterward.").
+				Title("Fix ownership?").
+				Description("Uses sudo. Don't run teaway with sudo afterward.").
 				Value(&fix),
 		),
 	)
@@ -207,9 +208,28 @@ func repairPermission(application app.App, typed *teaerr.Error) error {
 
 func runForm(application app.App, form *huh.Form) error {
 	return form.
-		WithTheme(huh.ThemeCharm()).
+		WithTheme(clientTheme()).
+		WithKeyMap(clientKeyMap()).
+		WithShowHelp(false).
 		WithProgramOptions(programOptions(application)...).
 		Run()
+}
+
+func clientTheme() *huh.Theme {
+	theme := huh.ThemeCharm()
+	theme.FieldSeparator = lipgloss.NewStyle().SetString("\n")
+	active := lipgloss.NewStyle().Foreground(lipgloss.Color("#F780E2"))
+	theme.Focused.SelectedOption = active
+	theme.Blurred.SelectedOption = active
+	return theme
+}
+
+func clientKeyMap() *huh.KeyMap {
+	keys := huh.NewDefaultKeyMap()
+	keys.Select.Filter.SetEnabled(false)
+	keys.Select.SetFilter.SetEnabled(false)
+	keys.Select.ClearFilter.SetEnabled(false)
+	return keys
 }
 
 func runProgram(application app.App, model tea.Model) (tea.Model, error) {
@@ -238,16 +258,13 @@ func ignoreAbort(err error) error {
 	return err
 }
 
-func statusDescription(powerStatus power.Status, shutdownStatus shutdown.Status, auth privilege.AuthStatus, loc *time.Location) string {
+func statusDescription(powerStatus power.Status, shutdownStatus shutdown.Status, loc *time.Location) string {
 	lines := []string{awakeSentence(powerStatus)}
-	if batteryPower(powerStatus.PowerSource) {
-		lines = append(lines, "On battery. Keep it powered if this Mac will sit unattended.")
+	if line := batteryPower(powerStatus.PowerSource); line != "" {
+		lines = append(lines, line)
 	}
 	if shutdownStatus.Record != nil {
 		lines = append(lines, shutdownSentence(shutdownStatus, loc))
-	}
-	if auth != privilege.AuthRegistered {
-		lines = append(lines, passwordlessSentence(auth))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -255,50 +272,46 @@ func statusDescription(powerStatus power.Status, shutdownStatus shutdown.Status,
 func awakeSentence(status power.Status) string {
 	switch status.Observation {
 	case power.On:
-		return "This Mac stays awake. Teaway will restore the previous sleep setting."
+		return "Staying awake"
 	case power.Borrowed:
-		return "This Mac is already staying awake. Teaway is preserving that setting."
+		return "Already awake"
 	case power.External:
-		return "Sleep is already disabled by something else. Teaway will not take it over."
+		return "Awake · not ours"
 	case power.NeedsRecovery:
-		return "Awake mode needs recovery before Teaway can change it safely."
+		return "Needs recovery"
 	case power.Conflict:
-		return "Awake mode is in conflict. Check `teaway status` before changing it."
+		return "In conflict"
 	default:
-		return "Sleep is allowed. Keep this Mac awake when you need it available."
+		return "Sleep allowed"
 	}
 }
 
 func shutdownSentence(status shutdown.Status, loc *time.Location) string {
-	when := formatLocal(status.Record.ScheduledAt, loc)
+	when := formatWhen(status.Record.ScheduledAt, loc)
 	switch status.Observation {
 	case shutdown.Planned:
-		return "A shutdown is being prepared for " + when + "."
+		return "Shutdown · preparing"
 	case shutdown.Missing:
-		return "The recorded shutdown is missing from macOS · " + when + "."
+		return "Shutdown · missing"
 	case shutdown.NeedsRecovery:
-		return "The scheduled shutdown needs recovery · " + when + "."
+		return "Shutdown · needs recovery"
 	case shutdown.Conflict:
-		return "The scheduled shutdown is in conflict · " + when + "."
+		return "Shutdown · conflict"
 	default:
-		return "Shutdown scheduled for " + when + "."
+		return "Shutdown · " + when
 	}
 }
 
-func passwordlessSentence(auth privilege.AuthStatus) string {
-	if auth == privilege.AuthNeedsRepair {
-		return "Passwordless controls need repair. The next change can fix them."
+func batteryPower(source string) string {
+	if strings.Contains(strings.ToLower(source), "battery") {
+		return "On battery"
 	}
-	return "Passwordless controls are not set up. The next change can set them up."
+	return ""
 }
 
-func batteryPower(source string) bool {
-	return strings.Contains(strings.ToLower(source), "battery")
-}
-
-func formatLocal(t time.Time, loc *time.Location) string {
+func formatWhen(t time.Time, loc *time.Location) string {
 	if loc == nil {
 		loc = time.Local
 	}
-	return t.In(loc).Format("2006-01-02 15:04:05 Z07:00")
+	return t.In(loc).Format("Mon 15:04")
 }
