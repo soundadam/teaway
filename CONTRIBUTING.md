@@ -29,8 +29,9 @@ go build -o teaway .
 ## Pull requests
 
 Include tests for normal behavior, idempotence, partial failure, conflict, and
-recovery. Update README, operations, authorization, security, product design,
-and changelog material when the public contract changes.
+recovery. When the public contract changes, update README, the affected Mintlify
+pages, product-design, and CHANGELOG. The client is the operator manual; do not
+add public pages that re-teach menu actions.
 
 Documentation for operators is generated from `docs/` (Mintlify). Preview with
 `mint dev` in that directory after CLI access is available. Do not commit

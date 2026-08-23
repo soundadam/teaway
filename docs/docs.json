@@ -21,38 +21,16 @@
             "group": "Get Started",
             "pages": [
               "index",
-              "introduction",
-              "installation",
-              "quickstart",
-              "development"
-            ]
-          },
-          {
-            "group": "Commands",
-            "pages": [
-              "commands/overview",
-              "commands/on-off",
-              "commands/status",
-              "commands/shutdown",
-              "commands/auth"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "guides/mac-server-setup",
-              "guides/authorization",
-              "guides/upgrade",
-              "guides/recovery"
+              "using",
+              "safety"
             ]
           },
           {
             "group": "Reference",
             "pages": [
-              "reference/security",
-              "reference/safety",
-              "reference/migration",
-              "reference/changelog"
+              "security",
+              "changelog",
+              "development"
             ]
           }
         ]

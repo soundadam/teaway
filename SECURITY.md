@@ -19,5 +19,5 @@ Do not include administrator passwords, private keys, access tokens, or other
 unrelated secrets.
 
 Reports will be evaluated against the boundaries in
-[`docs/security.md`](docs/security.md). Public disclosure should wait until a
-fix or coordinated advisory is available.
+[the security page](https://teaway.mintlify.app/security). Public disclosure
+should wait until a fix or coordinated advisory is available.

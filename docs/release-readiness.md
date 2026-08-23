@@ -17,10 +17,12 @@ source. No unnotarized prebuilt binary is published.
 
 ### Product and documentation
 
-- README explains the server-oriented use case, quick start, safety limits, and
-  the boundary between power control and workload/remote-access management.
-- Operations, authorization, security, migration, product-design, contributing,
-  and security-reporting documents are linked from the repository front page.
+- README explains the server-oriented use case, the `teaway` client, safety
+  limits, and the boundary between power control and workload/remote-access
+  management.
+- Public operator docs live on Mintlify (home, using, safety, security).
+  Product-design and release-readiness stay off the public sidebar.
+  SECURITY.md remains the vulnerability-reporting entrypoint.
 - Repository description and topics cover macOS, headless operation, homelab,
   self-hosting, sleep prevention, Go, and Homebrew without claiming network
   or workload features.

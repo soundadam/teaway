@@ -89,6 +89,12 @@ timezone. `on` remains enabled until `off` or system power-off; shutdown
 scheduling is independent. `tui` and `interactive` are hidden deprecated aliases
 for no-argument `teaway`.
 
+## Documentation
+
+The client is the operator manual. Public docs cover install, safety, trust,
+and scripting. They do not re-teach menu actions. Product design and release
+readiness stay off the public sidebar.
+
 ## Guarantees
 
 - Read-only commands do not request authorization or mutate power state.
