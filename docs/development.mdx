@@ -4,8 +4,8 @@ description: "Build, test, and keep teaway inside its power-control boundary."
 ---
 
 Full contributor rules live in
-[`CONTRIBUTING.md`](https://github.com/soundadam/teaway/blob/main/CONTRIBUTING.md)
-in the repository. This page is the short path.
+[`CONTRIBUTING.md`](https://github.com/soundadam/teaway/blob/main/CONTRIBUTING.md).
+This page is the short path.
 
 ## Setup
 
@@ -21,12 +21,11 @@ go build -o teaway .
 
 ## Boundary
 
-`teaway` owns reversible power control and exact shutdown ownership. Do not add
-a hidden control plane, password handling, networking setup, or workload
-supervision.
+`teaway` owns reversible power control and exact shutdown ownership. Do not add a hidden control plane, password handling, networking setup, or workload supervision.
 
-Automated tests must intercept privileged operations. CI must never change
-runner power settings, install the helper, or perform a real shutdown.
+The client is the operator manual. Do not add public pages that re-teach menu actions.
+
+Automated tests must intercept privileged operations. CI must never change runner power settings, install the helper, or perform a real shutdown.
 
 ## Preview this site
 
@@ -37,6 +36,4 @@ cd docs
 mint dev
 ```
 
-The live site is [teaway.mintlify.app](https://teaway.mintlify.app). Custom
-domains are configured later in the Mintlify dashboard; do not commit DNS
-secrets here.
+The live site is [teaway.mintlify.app](https://teaway.mintlify.app). Custom domains are configured later in the Mintlify dashboard; do not commit DNS secrets here.
