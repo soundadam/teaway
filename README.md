@@ -1,99 +1,37 @@
 # teaway
 
-[![CI](https://github.com/soundadam/teaway/actions/workflows/ci.yml/badge.svg)](https://github.com/soundadam/teaway/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/soundadam/teaway)](https://github.com/soundadam/teaway/releases/latest)
-[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black)](https://github.com/soundadam/teaway#requirements)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/soundadam/teaway/actions/workflows/ci.yml"><img src="https://github.com/soundadam/teaway/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/soundadam/teaway/releases/latest"><img src="https://img.shields.io/github/v/release/soundadam/teaway" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
+</p>
 
-> **Run a Mac like an always-on server.**
+<p align="center"><strong>Keep a Mac awake. Restore it when you're done.</strong></p>
 
-Product page: [soundadam.com/projects/teaway](https://soundadam.com/projects/teaway/)
-
-`teaway` keeps a Mac working when ordinary sleep would interrupt it—including a
-MacBook with the lid closed—then restores the exact power setting it owned. It
-can also schedule and cancel one delayed shutdown.
-
-It manages the power lifecycle only. SSH, Screen Sharing, networking, service
-supervision, and the workload remain under your control.
-
-## Quick start
+<p align="center">
+  <img src="docs/images/client.png" alt="The teaway client" width="680">
+</p>
 
 ```sh
 brew install soundadam/tap/teaway
 teaway
 ```
 
-No argument opens the client. It stays open across actions: keep the Mac awake,
-allow sleep again, schedule or cancel a shutdown, and set up passwordless
-controls when a change needs them.
+That's the client. It stays open. Keep the Mac awake — including with the lid
+closed — then restore the exact sleep setting it owned.
 
-The same actions exist as scriptable commands (`teaway on`, `teaway off`,
-`teaway status`, `teaway shutdown …`, `teaway auth …`). See
-[Using teaway](https://teaway.mintlify.app/using).
+<p align="center">
+  <img src="docs/images/shutdown.png" alt="Schedule a shutdown" width="680">
+</p>
 
-Before closing a laptop lid, verify that the Mac is stationary, well
-ventilated, and reachable through the remote-access method you configured.
-Remaining on AC power is still a good idea for unattended use. `teaway` does
-not configure Remote Login, Screen Sharing, VPNs, firewalls, DNS, or service
-startup.
-
-## Why teaway
-
-- **Closed-lid and headless operation.** Manages the macOS `disablesleep` state
-  instead of merely keeping one foreground process active.
-- **Reversible ownership.** Records the value observed before `on` and restores
-  only the state that `teaway` owns.
-- **Safe repeated use.** An optional per-user helper removes repeated password
-  prompts without granting a shell or arbitrary `pmset` access.
-- **Explicit shutdowns.** Resolves a duration to an absolute local deadline,
-  verifies the system event, and cancels only the matching `teaway` event.
-- **No background control plane.** No daemon, listener, account, telemetry,
-  remote API, workload inspection, or cloud dependency.
-
-## Requirements
-
-- macOS 13 Ventura or later
-- Apple silicon or Intel Mac supported by the installed macOS release
-- Administrator authorization for power mutations or helper registration
-
-## Safety
-
-A MacBook has less cooling headroom with its lid closed. Keep the machine on a
-hard, open surface; never run it closed inside a bag, drawer, or other confined
-space. `teaway` does not override thermal protection and cannot prevent power
-loss, kernel failure, forced updates, hardware faults, or a network outage.
-
-Treat a laptop or desktop Mac as a small server only after configuring the rest
-of the availability stack. See [Safety](https://teaway.mintlify.app/safety).
-
-## Install and upgrade
+Need a script instead?
 
 ```sh
-brew install soundadam/tap/teaway
-brew update
-brew upgrade teaway
+teaway on
+teaway shutdown after 2h
+teaway off
 ```
 
-The Homebrew Formula builds the `teaway` command from the immutable GitHub
-source tag. Public releases do not ship an unnotarized prebuilt executable.
-After an upgrade, the client offers to repair passwordless controls if the
-helper is stale.
+macOS 13+. Don't close a MacBook in a bag.
 
-Homebrew installs only `teaway`. The shorter `tea` name belongs to another
-Homebrew package and may be used only as a personal shell alias.
-
-To work on the source tree, see [Contributing](CONTRIBUTING.md).
-
-## Documentation
-
-Published docs: [teaway.mintlify.app](https://teaway.mintlify.app).
-The source is [`docs/`](docs/README.md).
-
-- [Using teaway](https://teaway.mintlify.app/using)
-- [Safety](https://teaway.mintlify.app/safety)
-- [Security](https://teaway.mintlify.app/security)
-- [Changelog](CHANGELOG.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security reporting](SECURITY.md)
-
-`teaway` is distributed under the [MIT License](LICENSE).
+[Product](https://soundadam.com/projects/teaway/) · [Docs](https://teaway.mintlify.app) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)

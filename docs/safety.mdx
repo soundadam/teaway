@@ -1,31 +1,12 @@
 ---
-title: "Safety and limits"
-sidebarTitle: "Safety"
-description: "Closed-lid thermals, power, and what teaway cannot protect against."
+title: "Safety"
+description: "Closed-lid heat and power."
 ---
 
-`teaway` keeps a Mac awake and can schedule one shutdown. It cannot manage the room around the machine or the rest of an availability stack.
-
-## Closed-lid thermals
-
-A MacBook has less cooling headroom with its lid closed.
+A MacBook cools worse with the lid closed.
 
 <Warning>
-  Never run a MacBook closed inside a bag, backpack, drawer, bedding, or other confined space. Trapped heat can damage the battery, throttle the CPU, or cause a fire. This applies whether teaway is running or not.
+  Never run it closed inside a bag, backpack, drawer, or bedding. Trapped heat can wreck the machine.
 </Warning>
 
-Place the machine on a hard, open, well-ventilated surface and keep it stationary before walking away. `teaway` does not override macOS thermal protection.
-
-## Power
-
-Remain on AC power for unattended use. `teaway on` works the same on battery, but a battery can drain silently. Desktop Macs have no battery buffer; a brief mains loss is an immediate shutdown.
-
-## What teaway cannot prevent
-
-Power loss, kernel panic, forced macOS updates, hardware faults, network outages, and thermal shutdown. None of these are teaway failures.
-
-## What teaway does not manage
-
-Remote Login, Screen Sharing, VPNs, firewalls, Wi-Fi, launchd or other supervisors, backups, disk space, or recovery after a crash. Configure those independently, and test them while you still have physical access.
-
-Treat a Mac as a small server only after remote access, service startup, backups, monitoring, stable networking, and—where needed—a UPS are in place.
+Leave it on a hard, open surface. Stay on AC if you'll walk away — `teaway` works on battery, but a battery can drain silently.

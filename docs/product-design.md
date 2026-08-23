@@ -91,8 +91,8 @@ for no-argument `teaway`.
 
 ## Documentation
 
-The client is the operator manual. Public docs cover install, safety, trust,
-and scripting. They do not re-teach menu actions. Product design and release
+The client is the operator manual. Public docs show it, then cover scripts,
+safety, and trust. They do not re-teach menu actions. Product design and release
 readiness stay off the public sidebar.
 
 ## Guarantees

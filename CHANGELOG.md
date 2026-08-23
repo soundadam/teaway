@@ -12,9 +12,8 @@ All notable changes to `teaway` are documented here.
 
 ### Changed
 
-- Collapsed public docs around the TUI client. Command encyclopedias and
-  parallel GitHub operator notes are retired; install, safety, trust, and
-  scripting remain at [teaway.mintlify.app](https://teaway.mintlify.app).
+- Showed the Charm client in README and public docs instead of describing the
+  menu in prose.
 - Published operator docs from `docs/` to [teaway.mintlify.app](https://teaway.mintlify.app).
 - Made the TUI a session client: it stays open after an action, drops the
   Refresh command, and shows only the status lines that currently matter.
