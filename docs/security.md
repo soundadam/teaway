@@ -89,7 +89,7 @@ outside its control.
 
 ## Installation and supply chain
 
-The canonical repository, Formula token, SwiftPM product, and executable are
+The canonical repository, Formula token, Go module, and executable are
 `teaway`. Homebrew installs no `tea` or `tea-away` command.
 
 GitHub Actions runs on GitHub-hosted macOS runners with read-only token

@@ -34,8 +34,8 @@ CLI useful across many server and workstation setups.
 
 ## Naming contract
 
-The publisher is `soundadam`; the repository, Homebrew Formula token, SwiftPM
-product, and executable are `teaway`. Homebrew installs only `teaway` because
+The publisher is `soundadam`; the repository, Homebrew Formula token, Go module,
+and executable are `teaway`. Homebrew installs only `teaway` because
 the `tea` token already belongs to the Gitea CLI. A user-managed local alias may
 point `tea` to `teaway`, but no release creates it.
 
@@ -139,6 +139,19 @@ Version 0.4.2 removes the AC-power gate from awake mode:
 - `teaway on` works the same on battery and AC power;
 - status still reports the current power source as information only; and
 - operator-facing documentation stays on the installed CLI.
+
+## 0.5.0 scope
+
+Version 0.5.0 replaces the implementation language without changing the power
+contract:
+
+- the public command tree is a cobra CLI, with the same bounded operations;
+- no-argument `teaway` opens a Charm TUI (`huh` + `lipgloss`) over those
+  operations instead of a numbered prompt;
+- the user-facing CLI refuses to run as root so it cannot rewrite `state.json`
+  as an unreadable root-owned file; and
+- an unreadable state file explains the `sudo teaway` cause and offers a
+  one-step ownership repair.
 
 ## Deferred work
 

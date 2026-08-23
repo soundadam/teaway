@@ -16,8 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  swift-package:
-    name: Swift package
+  go:
+    name: Go
     runs-on: macos-15
     timeout-minutes: 15
 
@@ -28,12 +28,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
       - name: Report toolchain
         run: |
           set -euo pipefail
           sw_vers
-          xcodebuild -version
-          swift --version
+          go version
 
       - name: Check changed-file whitespace
         env:
@@ -61,32 +65,31 @@ jobs:
             exit 1
           fi
 
-          if git grep -nF 'sudo -k' -- Sources; then
+          if git grep -nF 'sudo -k' -- internal cmd main.go; then
             echo "Production sources must not invalidate the sudo credential cache." >&2
             exit 1
           fi
-
-      - name: Validate package manifest
-        run: swift package dump-package >/dev/null
 
       - name: Validate documentation
         run: python3 scripts/check-documentation.py
 
       - name: Run tests
-        run: swift test
+        run: go test ./...
 
       - name: Build release executable
-        run: swift build -c release --product teaway
+        run: |
+          mkdir -p dist
+          go build -o dist/teaway .
 
       - name: Smoke-test release executable
         run: |
           set -euo pipefail
-          source_version=$(awk -F'"' '/public static let current = / {print $2}' Sources/TeaAwayCore/Models.swift)
-          actual_version=$(.build/release/teaway version)
+          source_version=$(awk -F'"' '/^const Current = / {print $2}' internal/version/version.go)
+          actual_version=$(./dist/teaway version)
           test "$actual_version" = "teaway $source_version"
 
           set +e
-          helper_error=$(.build/release/teaway __teaway_privileged version 2>&1)
+          helper_error=$(./dist/teaway __teaway_privileged version 2>&1)
           helper_status=$?
           set -e
           test "$helper_status" -eq 77

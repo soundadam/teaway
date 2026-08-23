@@ -4,6 +4,14 @@ All notable changes to `teaway` are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced the Swift CLI with a Go cobra command tree and a Charm TUI
+  (`huh` + `lipgloss`) so `teaway` with no arguments is a guided menu instead
+  of a numbered prompt.
+- Refused to run the user-facing CLI as root, and explained how to reclaim a
+  `state.json` that became unreadable after `sudo teaway`.
+
 ## [0.4.2] - 2026-08-19
 
 ### Changed
