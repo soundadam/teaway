@@ -40,7 +40,7 @@ func NewRoot() *cobra.Command {
 		statusCmd(),
 		shutdownCmd(),
 		authCmd(),
-		interactiveCmd(),
+		tuiCmd(),
 		versionCmd(),
 	)
 	return root
@@ -80,10 +80,17 @@ func statusCmd() *cobra.Command {
 	return &cobra.Command{Use: "status", Short: "Show awake mode, power source, and shutdown state", Args: cobra.NoArgs, RunE: withApp(func(a app.App, _ []string) error { return a.Status() })}
 }
 
-func interactiveCmd() *cobra.Command {
+func tuiCmd() *cobra.Command {
 	run := withApp(func(a app.App, _ []string) error { return tui.Run(a) })
-	cmd := &cobra.Command{Use: "interactive", Aliases: []string{"tui"}, Short: "Open the guided status and action menu", Args: cobra.NoArgs, RunE: run}
-	return cmd
+	return &cobra.Command{
+		Use:        "tui",
+		Aliases:    []string{"interactive"},
+		Short:      "Open the Teaway client",
+		Hidden:     true,
+		Deprecated: "run teaway with no arguments",
+		Args:       cobra.NoArgs,
+		RunE:       run,
+	}
 }
 
 func versionCmd() *cobra.Command {

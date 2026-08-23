@@ -56,11 +56,7 @@ A healthy result reports `Awake mode: On — managed by teaway` and
 `disablesleep=1`. `status` also reports the current power source; that value is
 informational. Verify remote reachability again before closing a laptop lid.
 
-For a guided status and action menu, run:
-
-```sh
-teaway interactive
-```
+For a guided client, run `teaway` with no arguments.
 
 `teaway on` is idempotent. Running it again does not create a second ownership
 record or overwrite the saved baseline.

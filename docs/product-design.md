@@ -61,7 +61,6 @@ teaway
 teaway on
 teaway off
 teaway status
-teaway interactive
 
 teaway shutdown after DURATION
 teaway shutdown status
@@ -75,11 +74,14 @@ teaway version
 teaway help
 ```
 
-No argument opens the guided, single-action menu. `interactive` and `tui` are
-explicit aliases for the same interface. `status` remains the non-interactive
-status command. Durations require units and are rendered as an absolute local
-deadline with timezone. `on` remains
-enabled until `off` or system power-off; shutdown scheduling is independent.
+No argument opens the client. The client stays open across bounded actions and
+is a presentation layer over the same services; `on`, `off`, `status`,
+`shutdown`, and `auth` remain the scriptable verbs. `status` is the
+non-interactive diagnostic command and keeps native `disablesleep` values.
+Durations require units and are rendered as an absolute local deadline with
+timezone. `on` remains enabled until `off` or system power-off; shutdown
+scheduling is independent. `tui` and `interactive` are hidden deprecated aliases
+for no-argument `teaway`.
 
 ## Guarantees
 
@@ -92,7 +94,7 @@ enabled until `off` or system power-off; shutdown scheduling is independent.
 - At most one `teaway` shutdown exists, and cancellation uses its exact tuple.
 - Private state is atomic and mode-restricted.
 - Privileged execution uses fixed system paths and allowlisted operations.
-- Interactive mode is a presentation layer over the same services and does not
+- The client is a presentation layer over the same services and does not
   introduce a daemon, listener, or broader privileged interface.
 - Registered mode delegates narrow operations to one macOS account, never an
   arbitrary shell or arbitrary `pmset` invocation.
@@ -113,8 +115,7 @@ Version 0.3.0 establishes the server-oriented release line:
 
 Version 0.4.0 makes the existing bounded operations easier to discover and use:
 
-- no-argument `teaway` opens a one-action guided terminal menu;
-- `interactive` and `tui` are aliases for the same guided mode;
+- no-argument `teaway` opens the client;
 - status and action results use approachable descriptions while preserving
   diagnostic native values;
 - shutdown scheduling no longer requires a long typed phrase; and
@@ -145,9 +146,8 @@ Version 0.4.2 removes the AC-power gate from awake mode:
 Version 0.5.0 replaces the implementation language without changing the power
 contract:
 
-- the public command tree is a cobra CLI, with the same bounded operations;
-- no-argument `teaway` opens a Charm TUI (`huh` + `lipgloss`) over those
-  operations instead of a numbered prompt;
+- no-argument `teaway` opens a Charm TUI (`huh` + `lipgloss`) as the client;
+- the same bounded operations remain available as scriptable verbs;
 - the user-facing CLI refuses to run as root so it cannot rewrite `state.json`
   as an unreadable root-owned file; and
 - an unreadable state file explains the `sudo teaway` cause and offers a

@@ -41,12 +41,10 @@ brew install soundadam/tap/teaway
 # One visible administrator authorization, then narrow passwordless operations.
 teaway auth register
 
-# Keep the Mac available for remote work.
+# Open the client, or keep the Mac available from a script.
+teaway
 teaway on
 teaway status
-
-# Prefer a guided menu? Open the interactive mode.
-teaway interactive
 
 # Optional: shut down after a bounded delay.
 teaway shutdown after 2h
@@ -68,14 +66,13 @@ firewalls, DNS, or service startup.
 
 | Command | Effect |
 | --- | --- |
-| `teaway` | Open the guided status and action menu |
+| `teaway` | Open the client |
 | `teaway status` | Read power source, observed sleep state, ownership, and shutdown state |
 | `teaway on` | Snapshot the current state, disable sleep, verify, and record ownership |
 | `teaway off` | Restore only the exact state owned by `teaway` |
 | `teaway shutdown after 30m` | Schedule one shutdown after an explicit duration |
 | `teaway shutdown status` | Reconcile the private record with macOS scheduled power events |
 | `teaway shutdown cancel` | Cancel only the exact `teaway`-owned shutdown |
-| `teaway interactive` / `teaway tui` | Open a guided status and action menu |
 | `teaway auth status` | Inspect ordinary/registered authorization and sudo Touch ID configuration |
 | `teaway auth register` | Set up narrow passwordless controls after one visible administrator check |
 | `teaway auth unregister` | Remove the helper and its sudoers rule |
@@ -85,10 +82,9 @@ Durations accept `m`, `h`, and `d` units. Delayed shutdowns are bounded between
 10 minutes and 7 days.
 
 Human-facing output explains results in plain language while retaining relevant
-native settings for diagnosis. Interactive mode offers the same bounded
-operations, exits after one action, and does not add a daemon or background
-process. When passwordless controls are not ready, the menu offers a one-time
-setup action and explains the authorization boundary before macOS prompts.
+native settings for diagnosis. The client stays open across actions and does
+not add a daemon or background process. When passwordless controls are not
+ready, the next privileged action can set them up before macOS prompts.
 
 ## Operating model
 

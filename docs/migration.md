@@ -22,8 +22,10 @@ Then inspect the native baseline:
 teaway status
 ```
 
-Only after the live value is restored should `teaway on` establish a new native
-snapshot. Native `teaway` does not import, rewrite, or delete legacy state files.
+Native `teaway` does not import, rewrite, or delete legacy state files, and it
+no longer reads `tea-away` directories or `TEA_STATE_DIR` environment
+variables. A leftover `tea-away:` shutdown event on the Mac can still be
+cancelled by exact tuple.
 
 ## Cleanup
 

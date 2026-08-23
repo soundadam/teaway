@@ -60,8 +60,7 @@ type File struct {
 func Empty() File { return File{SchemaVersion: schemaVersion} }
 
 type Paths struct {
-	Directory       string
-	LegacyDirectory string
+	Directory string
 }
 
 func (p Paths) StateFile() string { return filepath.Join(p.Directory, "state.json") }
@@ -71,27 +70,14 @@ func Resolve(env map[string]string) Paths {
 	if value := env["TEAWAY_STATE_DIR"]; value != "" {
 		return Paths{Directory: value}
 	}
-	if value := env["TEA_STATE_DIR"]; value != "" {
-		return Paths{Directory: value, LegacyDirectory: env["TEA_AWAY_STATE_DIR"]}
-	}
-	if value := env["TEA_AWAY_STATE_DIR"]; value != "" {
-		return Paths{Directory: value}
-	}
 	home := env["HOME"]
 	if home == "" {
 		home, _ = os.UserHomeDir()
 	}
 	if xdg := env["XDG_STATE_HOME"]; xdg != "" {
-		return Paths{
-			Directory:       filepath.Join(xdg, "teaway"),
-			LegacyDirectory: filepath.Join(xdg, "tea-away"),
-		}
+		return Paths{Directory: filepath.Join(xdg, "teaway")}
 	}
-	support := filepath.Join(home, "Library", "Application Support")
-	return Paths{
-		Directory:       filepath.Join(support, "teaway"),
-		LegacyDirectory: filepath.Join(support, "tea-away"),
-	}
+	return Paths{Directory: filepath.Join(home, "Library", "Application Support", "teaway")}
 }
 
 type Store struct {
@@ -99,25 +85,15 @@ type Store struct {
 }
 
 func (s Store) Load() (File, error) {
-	files := s.existingFiles()
-	if len(files) == 0 {
+	path := s.Paths.StateFile()
+	_, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
 		return Empty(), nil
 	}
-	states := make([]File, 0, len(files))
-	for _, path := range files {
-		state, err := decodeFile(path)
-		if err != nil {
-			return File{}, err
-		}
-		states = append(states, state)
+	if err != nil {
+		return File{}, permissionOr(path, err)
 	}
-	first := states[0]
-	for _, other := range states[1:] {
-		if !equalState(first, other) {
-			return File{}, teaerr.StateCorrupt("conflicting canonical and legacy state files; refusing to discard ownership")
-		}
-	}
-	return first, nil
+	return decodeFile(path)
 }
 
 func (s Store) Save(state File) error {
@@ -129,62 +105,36 @@ func (s Store) Save(state File) error {
 		return err
 	}
 	data = append(data, '\n')
-	destinations := s.existingFiles()
-	if len(destinations) == 0 {
-		destinations = []string{s.Paths.StateFile()}
+	path := s.Paths.StateFile()
+	if err := s.prepareDir(filepath.Dir(path)); err != nil {
+		return err
 	}
-	for _, path := range destinations {
-		if err := s.prepareDir(filepath.Dir(path)); err != nil {
-			return err
-		}
-		tmp := path + ".tmp"
-		if err := os.WriteFile(tmp, data, 0o600); err != nil {
-			return permissionOr(path, err)
-		}
-		if err := os.Rename(tmp, path); err != nil {
-			_ = os.Remove(tmp)
-			return permissionOr(path, err)
-		}
-		if err := os.Chmod(path, 0o600); err != nil {
-			return permissionOr(path, err)
-		}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+		return permissionOr(path, err)
 	}
-	return nil
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
+		return permissionOr(path, err)
+	}
+	return permissionOr(path, os.Chmod(path, 0o600))
 }
 
 func (s Store) WithLock(fn func() error) error {
-	files := s.candidateFiles()
-	lockPaths := make([]string, 0, len(files))
-	seen := map[string]bool{}
-	for _, file := range files {
-		dir := filepath.Dir(file)
-		lock := filepath.Join(dir, "state.lock")
-		if seen[lock] {
-			continue
-		}
-		seen[lock] = true
-		lockPaths = append(lockPaths, lock)
+	lock := s.Paths.LockFile()
+	if err := s.prepareDir(filepath.Dir(lock)); err != nil {
+		return err
 	}
-	fds := make([]*os.File, 0, len(lockPaths))
+	fd, err := os.OpenFile(lock, os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return teaerr.StateLocked()
+	}
 	defer func() {
-		for i := len(fds) - 1; i >= 0; i-- {
-			_ = unix.Flock(int(fds[i].Fd()), unix.LOCK_UN)
-			_ = fds[i].Close()
-		}
+		_ = unix.Flock(int(fd.Fd()), unix.LOCK_UN)
+		_ = fd.Close()
 	}()
-	for _, lock := range lockPaths {
-		if err := s.prepareDir(filepath.Dir(lock)); err != nil {
-			return err
-		}
-		fd, err := os.OpenFile(lock, os.O_CREATE|os.O_RDWR, 0o600)
-		if err != nil {
-			return teaerr.StateLocked()
-		}
-		if err := unix.Flock(int(fd.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
-			_ = fd.Close()
-			return teaerr.StateLocked()
-		}
-		fds = append(fds, fd)
+	if err := unix.Flock(int(fd.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+		return teaerr.StateLocked()
 	}
 	return fn()
 }
@@ -194,27 +144,6 @@ func (s Store) prepareDir(dir string) error {
 		return permissionOr(dir, err)
 	}
 	return os.Chmod(dir, 0o700)
-}
-
-func (s Store) existingFiles() []string {
-	var existing []string
-	for _, path := range s.candidateFiles() {
-		if _, err := os.Stat(path); err == nil {
-			existing = append(existing, path)
-		}
-	}
-	return existing
-}
-
-func (s Store) candidateFiles() []string {
-	candidates := []string{s.Paths.StateFile()}
-	if s.Paths.LegacyDirectory != "" && filepath.Clean(s.Paths.LegacyDirectory) != filepath.Clean(s.Paths.Directory) {
-		legacy := filepath.Join(s.Paths.LegacyDirectory, "state.json")
-		if _, err := os.Stat(legacy); err == nil {
-			candidates = append(candidates, legacy)
-		}
-	}
-	return candidates
 }
 
 func decodeFile(path string) (File, error) {
@@ -273,10 +202,4 @@ func repairHint(path string) string {
 		"state.json is owned by %s. This usually happens after `sudo teaway`. Do not run the user-facing CLI with sudo.\nRepair: sudo chown %s %q && sudo chmod 600 %q",
 		owner, name, path, path,
 	)
-}
-
-func equalState(a, b File) bool {
-	left, _ := json.Marshal(a)
-	right, _ := json.Marshal(b)
-	return string(left) == string(right)
 }

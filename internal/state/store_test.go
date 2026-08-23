@@ -32,6 +32,17 @@ func TestRoundTripAndPermissions(t *testing.T) {
 	}
 }
 
+func TestResolveIgnoresLegacyStateEnv(t *testing.T) {
+	got := Resolve(map[string]string{
+		"HOME":               "/tmp/teaway-home",
+		"TEA_STATE_DIR":      "/tmp/legacy-tea",
+		"TEA_AWAY_STATE_DIR": "/tmp/legacy-tea-away",
+	})
+	if got.Directory != "/tmp/teaway-home/Library/Application Support/teaway" {
+		t.Fatalf("Directory = %q", got.Directory)
+	}
+}
+
 func TestPermissionErrorIncludesRepair(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "state.json")

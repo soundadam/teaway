@@ -4,8 +4,25 @@ All notable changes to `teaway` are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- Drew the guided menu on an alternate screen so the action prompt is not
+  painted twice and leftover status-box borders do not remain after a
+  `state.json` ownership repair.
+
 ### Changed
 
+- Made the TUI a session client: it stays open after an action, drops the
+  Refresh command, and shows only the status lines that currently matter.
+- Deprecated `teaway tui` and `teaway interactive`; no-argument `teaway` is
+  the client.
+- Stopped reading `TEA_STATE_DIR`, `TEA_AWAY_STATE_DIR`, and sibling
+  `tea-away` state files. Historical `tea-away:` shutdown owners remain
+  cancellable.
+- Asked to set up or repair passwordless controls immediately before a
+  privileged TUI action, instead of waiting for a later sudo prompt.
+- Replaced the shutdown delay text field with a stepped 10-minute-to-7-day
+  picker and a custom-duration fallback.
 - Replaced the Swift CLI with a Go cobra command tree and a Charm TUI
   (`huh` + `lipgloss`) so `teaway` with no arguments is a guided menu instead
   of a numbered prompt.
